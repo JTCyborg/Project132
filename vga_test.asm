@@ -547,19 +547,146 @@ DebugHexOut:
 ; -------------------------------------------------------------------------
 ; -------------------------------------------------------------------------
 ; Spectrum display and keyboard control.
-; RST 10h is the Spectrum ROM PRINT-OUT entry (current channel #2).
-; SPACE is bit 0 of keyboard row 7F7F, active low.
+; Direct rendering to standard Spectrum bitmap/attribute memory.
+; Font is the exact font88.bin from Project112; no ROM calls are used.
+; SPACE polling follows Project112: port 7FFEh, bit 0 active low.
 ; -------------------------------------------------------------------------
 SpectrumPrint:
         LD      A,(HL)
         OR      A
         RET     Z
-        RST     $10
         INC     HL
+        CP      13
+        JR      Z,SpectrumPrintNewLine
+        CP      32
+        JR      C,SpectrumPrint
+        CP      128
+        JR      NC,SpectrumPrint
+        PUSH    HL
+        SUB     32
+        LD      L,A
+        LD      H,0
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      DE,Font88_132
+        ADD     HL,DE
+        LD      (SpectrumFontPtr),HL
+        XOR     A
+        LD      (SpectrumGlyphLine),A
+SpectrumGlyphLoop:
+        LD      HL,(SpectrumFontPtr)
+        LD      A,(HL)
+        LD      (SpectrumGlyphByte),A
+        INC     HL
+        LD      (SpectrumFontPtr),HL
+
+        ; Same bitmap address calculation as Project112 RenderGlyph_Standard112.
+        LD      A,(SpectrumCursorY)
+        ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        LD      B,A
+        LD      A,(SpectrumGlyphLine)
+        ADD     A,B
+        LD      B,A
+        LD      A,B
+        AND     $C0
+        RRCA
+        RRCA
+        RRCA
+        LD      C,A
+        LD      A,B
+        AND     $07
+        OR      C
+        OR      $40
+        LD      H,A
+        LD      A,B
+        AND     $38
+        RLCA
+        RLCA
+        LD      L,A
+        LD      A,(SpectrumCursorX)
+        OR      L
+        LD      L,A
+        LD      A,(SpectrumGlyphByte)
+        LD      (HL),A
+
+        LD      A,(SpectrumGlyphLine)
+        INC     A
+        LD      (SpectrumGlyphLine),A
+        CP      8
+        JR      NZ,SpectrumGlyphLoop
+
+        ; Same attribute-cell calculation as Project112.
+        LD      A,(SpectrumCursorY)
+        LD      L,A
+        LD      H,0
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      DE,$5800
+        ADD     HL,DE
+        LD      A,(SpectrumCursorX)
+        ADD     A,L
+        LD      L,A
+        JR      NC,SpectrumAttrAddressReady
+        INC     H
+SpectrumAttrAddressReady:
+        LD      A,$47
+        LD      (HL),A
+
+        LD      A,(SpectrumCursorX)
+        INC     A
+        CP      32
+        JR      C,SpectrumCursorXReady
+        XOR     A
+        LD      (SpectrumCursorX),A
+        LD      A,(SpectrumCursorY)
+        INC     A
+        CP      24
+        JR      C,SpectrumCursorYReady
+        XOR     A
+SpectrumCursorYReady:
+        LD      (SpectrumCursorY),A
+        POP     HL
+        JR      SpectrumPrint
+SpectrumCursorXReady:
+        LD      (SpectrumCursorX),A
+        POP     HL
+        JR      SpectrumPrint
+
+SpectrumPrintNewLine:
+        XOR     A
+        LD      (SpectrumCursorX),A
+        LD      A,(SpectrumCursorY)
+        INC     A
+        CP      24
+        JR      C,SpectrumNewLineYReady
+        XOR     A
+SpectrumNewLineYReady:
+        LD      (SpectrumCursorY),A
         JR      SpectrumPrint
 
 SpectrumClear:
-        CALL    $0D6B             ; Spectrum ROM CLS
+        XOR     A
+        LD      (SpectrumCursorX),A
+        LD      (SpectrumCursorY),A
+        ; Clear the 6144-byte bitmap.
+        LD      HL,$4000
+        LD      DE,$4001
+        LD      BC,$17FF
+        LD      (HL),A
+        LDIR
+        ; Initialize all 768 attributes.
+        LD      HL,$5800
+        LD      DE,$5801
+        LD      BC,$02FF
+        LD      A,$07
+        LD      (HL),A
+        LDIR
         RET
 
 SpectrumShowStartup:
@@ -694,6 +821,11 @@ DrawPitch:    DW 0
 DrawRowBase:  DW 0
 DrawPixelPtr: DW 0
 DrawStringPtr: DW 0
+SpectrumCursorX: DB 0
+SpectrumCursorY: DB 0
+SpectrumGlyphLine: DB 0
+SpectrumGlyphByte: DB 0
+SpectrumFontPtr: DW 0
 
 ModePattern:
         DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
@@ -771,6 +903,57 @@ ScreenWriteRunning:DEFM "STATUS: WRITING - PLEASE WAIT",13,13,0
 ScreenWritePassed: DEFM "STATUS: WRITE COMPLETE",13,13,0
 ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
 ScreenAllDone:     DEFM "ALL 13 VGA MODES TESTED",13,13,"RESET TO RUN AGAIN",0
+
+; Exact 768-byte font from Project112/src/font88.bin.
+Font88_132:
+        DB      $00,$00,$00,$00,$00,$00,$00,$00,$00,$08,$08,$08,$08,$00,$08,$00
+        DB      $00,$00,$00,$14,$14,$00,$00,$00,$0C,$14,$3E,$14,$3E,$18,$28,$00
+        DB      $08,$3E,$28,$1C,$0A,$3E,$08,$00,$00,$38,$28,$3C,$1E,$0A,$0E,$00
+        DB      $00,$0E,$08,$0C,$16,$14,$0E,$00,$00,$00,$00,$08,$08,$00,$00,$00
+        DB      $04,$08,$08,$08,$08,$08,$04,$00,$08,$04,$04,$04,$04,$04,$08,$00
+        DB      $00,$00,$2A,$1C,$1C,$2A,$00,$00,$00,$08,$08,$3E,$08,$08,$00,$00
+        DB      $00,$00,$00,$08,$08,$00,$00,$00,$00,$00,$00,$0C,$00,$00,$00,$00
+        DB      $00,$00,$00,$08,$00,$00,$00,$00,$02,$04,$04,$0C,$08,$08,$10,$00
+        DB      $00,$0C,$12,$1A,$12,$12,$0C,$00,$00,$18,$08,$08,$08,$08,$1C,$00
+        DB      $00,$1C,$02,$02,$04,$08,$1E,$00,$00,$1C,$02,$02,$0C,$02,$1E,$00
+        DB      $00,$04,$0C,$0C,$14,$1E,$04,$00,$00,$1E,$10,$1C,$02,$02,$1C,$00
+        DB      $00,$0E,$18,$10,$1E,$12,$0E,$00,$00,$1E,$02,$04,$04,$04,$08,$00
+        DB      $00,$0C,$12,$12,$0C,$12,$1E,$00,$00,$1C,$12,$1E,$02,$06,$1C,$00
+        DB      $00,$00,$08,$00,$00,$08,$00,$00,$00,$08,$00,$00,$08,$08,$00,$00
+        DB      $00,$00,$02,$1C,$18,$06,$00,$00,$00,$00,$1E,$00,$1E,$00,$00,$00
+        DB      $00,$00,$10,$0E,$06,$18,$00,$00,$00,$1C,$0C,$08,$08,$00,$08,$00
+        DB      $00,$0C,$12,$16,$16,$10,$0C,$00,$00,$0C,$0C,$0C,$0C,$1E,$12,$00
+        DB      $00,$1C,$12,$12,$1C,$12,$1E,$00,$00,$0E,$10,$10,$10,$10,$0E,$00
+        DB      $00,$1C,$12,$12,$12,$12,$1C,$00,$00,$1E,$10,$10,$1E,$10,$1E,$00
+        DB      $00,$1E,$10,$10,$1E,$10,$10,$00,$00,$0E,$10,$10,$16,$12,$0E,$00
+        DB      $00,$12,$12,$12,$1E,$12,$12,$00,$00,$1C,$08,$08,$08,$08,$1C,$00
+        DB      $00,$0C,$04,$04,$04,$04,$1C,$00,$00,$12,$14,$18,$14,$14,$12,$00
+        DB      $00,$10,$10,$10,$10,$10,$1E,$00,$00,$12,$1E,$1E,$1E,$12,$12,$00
+        DB      $00,$12,$1A,$1A,$16,$16,$12,$00,$00,$0C,$12,$12,$12,$12,$0C,$00
+        DB      $00,$1E,$12,$1E,$10,$10,$10,$00,$0C,$12,$12,$12,$12,$0C,$02,$00
+        DB      $00,$3C,$24,$38,$2C,$24,$22,$00,$00,$0E,$10,$1C,$06,$02,$1E,$00
+        DB      $00,$3E,$08,$08,$08,$08,$08,$00,$00,$12,$12,$12,$12,$12,$0C,$00
+        DB      $00,$12,$12,$0C,$0C,$0C,$0C,$00,$00,$22,$22,$2A,$14,$14,$14,$00
+        DB      $00,$12,$0C,$0C,$0C,$0C,$12,$00,$00,$22,$14,$08,$08,$08,$08,$00
+        DB      $00,$1E,$04,$04,$08,$08,$1E,$00,$0C,$08,$08,$08,$08,$08,$0C,$00
+        DB      $10,$08,$08,$0C,$04,$04,$02,$00,$0C,$04,$04,$04,$04,$04,$0C,$00
+        DB      $00,$00,$00,$0C,$12,$00,$00,$00,$00,$00,$00,$3E,$00,$00,$00,$00
+        DB      $00,$00,$00,$08,$00,$00,$00,$00,$00,$00,$1E,$1E,$12,$1E,$00,$00
+        DB      $10,$10,$10,$1C,$12,$12,$1C,$00,$00,$00,$0C,$10,$10,$0C,$00,$00
+        DB      $02,$02,$02,$0E,$12,$12,$0E,$00,$00,$00,$0E,$1E,$10,$0E,$00,$00
+        DB      $06,$08,$08,$1E,$08,$08,$08,$00,$00,$0E,$12,$12,$0E,$02,$1C,$00
+        DB      $10,$10,$10,$1E,$12,$12,$12,$00,$08,$00,$00,$18,$08,$08,$1C,$00
+        DB      $04,$00,$00,$0C,$04,$04,$04,$1C,$10,$10,$10,$16,$1C,$1C,$16,$00
+        DB      $18,$08,$08,$08,$08,$08,$0E,$00,$00,$00,$3E,$2A,$2A,$2A,$00,$00
+        DB      $00,$00,$1E,$12,$12,$12,$00,$00,$00,$00,$0C,$12,$12,$0C,$00,$00
+        DB      $00,$1C,$12,$12,$1C,$10,$10,$00,$00,$0E,$12,$12,$0E,$02,$02,$00
+        DB      $00,$00,$1C,$10,$10,$10,$00,$00,$00,$00,$1E,$1C,$02,$1E,$00,$00
+        DB      $00,$08,$1E,$08,$08,$0E,$00,$00,$00,$00,$12,$12,$12,$1E,$00,$00
+        DB      $00,$00,$12,$0C,$0C,$0C,$00,$00,$00,$00,$22,$2A,$1C,$14,$00,$00
+        DB      $00,$00,$1E,$0C,$0C,$1E,$00,$00,$00,$12,$0C,$0C,$08,$08,$18,$00
+        DB      $00,$00,$1E,$0C,$08,$1E,$00,$00,$0C,$08,$08,$10,$08,$08,$0C,$00
+        DB      $08,$08,$08,$08,$08,$08,$08,$08,$18,$08,$08,$04,$08,$08,$18,$00
+        DB      $00,$00,$00,$1E,$00,$00,$00,$00,$1E,$12,$12,$12,$12,$12,$1E,$00
 
 ProgramEnd:
 
