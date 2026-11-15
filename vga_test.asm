@@ -479,7 +479,10 @@ DrawBannerPutPixel:
 DrawBannerBackground:
         XOR     A
 DrawBannerPixelValueReady:
-        LD      B,(DrawBytes)
+        LD      C,A
+        LD      A,(DrawBytes)
+        LD      B,A
+        LD      A,C
 DrawBannerPutPixelByte:
         LD      (HL),A
         INC     HL
