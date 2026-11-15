@@ -23,8 +23,7 @@ VgaTestEntry:
         DI
         LD      SP,$BFFF
 
-        ; ROM PRINT-OUT/CLS need the normal Spectrum interrupt environment.
-        EI
+        ; Keep the same interrupt state as the proven Project112 startup.
         CALL    SpectrumShowStartup
 
         LD      HL,MsgBuild
@@ -32,7 +31,14 @@ VgaTestEntry:
         LD      HL,MsgStart
         CALL    DebugPrint
 
+        LD      HL,ScreenOpeningPorts
+        CALL    SpectrumShowStatus
         CALL    OpenATMShadowPorts
+
+        ; Match the proven Project112 page selection after shadow-port unlock.
+        XOR     A
+        LD      BC,$7FFD
+        OUT     (C),A
 
         LD      HL,MsgAdapterInit
         CALL    DebugPrint
@@ -564,6 +570,16 @@ SpectrumShowStartup:
         CALL    SpectrumPrint
         RET
 
+; HL points to a zero-terminated status string.
+SpectrumShowStatus:
+        PUSH    HL
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        POP     HL
+        CALL    SpectrumPrint
+        RET
+
 SpectrumShowInitialMode:
         CALL    SpectrumClear
         LD      HL,ScreenTitle
@@ -637,7 +653,8 @@ SpectrumShowWriteComplete:
         RET
 
 WaitSpace:
-        LD      BC,$7F7F
+        ; SPACE is bit 0 of keyboard row selected by port 7FFEh.
+        LD      BC,$7FFE
 WaitSpacePress:
         IN      A,(C)
         AND     1
@@ -746,6 +763,7 @@ MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
 
 ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
 ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
+ScreenOpeningPorts: DEFM "OPENING ATM SHADOW PORTS...",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA TEST CONFIGURATION:",13,13,0
 ScreenInitialMode: DEFM "INITIAL TEST 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
 ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VIDEO RAM",13,0
