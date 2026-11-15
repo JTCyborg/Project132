@@ -228,7 +228,7 @@ RunPackedModeSweep:
         CALL    DebugPrint
         LD      HL,PackedModeTable
         LD      (ModeTablePtr),HL
-        LD      A,14
+        LD      A,13
         LD      (ModeCount),A
 
 PackedModeNext:
@@ -251,19 +251,24 @@ PackedModeNext:
         LD      (ModeTablePtr),HL
 
         LD      A,0
-        LD      E,(ModeXLo)
+        LD      A,(ModeXLo)
+        LD      E,A
         CALL    WriteVgaRegister
         LD      A,1
-        LD      E,(ModeXHi)
+        LD      A,(ModeXHi)
+        LD      E,A
         CALL    WriteVgaRegister
         LD      A,2
-        LD      E,(ModeYLo)
+        LD      A,(ModeYLo)
+        LD      E,A
         CALL    WriteVgaRegister
         LD      A,3
-        LD      E,(ModeYHi)
+        LD      A,(ModeYHi)
+        LD      E,A
         CALL    WriteVgaRegister
         LD      A,4
-        LD      E,(ModeBpp)
+        LD      A,(ModeBpp)
+        LD      E,A
         CALL    WriteVgaRegister
         LD      A,5
         LD      E,1
