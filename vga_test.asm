@@ -11,7 +11,7 @@
 ;   - read back bytes from bank 0 and the last framebuffer bank
 ;   - report results on port EF (spectrum_out.txt)
 ;
-; Expected image: repeating eight-colour RGB565 vertical stripes.
+; Expected image: eight-colour RGB565 vertical bars.
 ; =========================================================================
 
         DEVICE ZXSPECTRUM128
@@ -142,7 +142,7 @@ FillBankBytes:
         LD      (HL),A
         INC     HL
 
-        ; Repeat the 16-byte RGB565 colour sequence.
+        ; Repeat the 128-byte RGB565 colour-bar sequence.
         PUSH    AF
         LD      A,D
         CP      HIGH ColorPatternEnd
@@ -228,10 +228,16 @@ DebugPrint:
 CurrentBank: DB 0
 
 ColorPattern:
-        ; RGB565 little-endian: black, blue, green, cyan,
-        ; red, magenta, yellow, white.
-        DB $00,$00, $1F,$00, $E0,$07, $FF,$07
-        DB $00,$F8, $1F,$F8, $E0,$FF, $FF,$FF
+        ; Eight RGB565 colours, each repeated for eight adjacent pixels.
+        ; This makes eight visible bars, repeated across the 640-pixel row.
+        DB $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
+        DB $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00
+        DB $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07
+        DB $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07
+        DB $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8
+        DB $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8
+        DB $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF
+        DB $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF
 ColorPatternEnd:
 
 MsgBuild:        DEFM "P132 VGA TEST ATM710",13,10,0
