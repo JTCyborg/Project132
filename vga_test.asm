@@ -538,7 +538,7 @@ DebugHexOut:
 ; -------------------------------------------------------------------------
 ; Spectrum display and keyboard control.
 ; RST 10h is the Spectrum ROM PRINT-OUT entry (current channel #2).
-; SPACE is bit 0 of keyboard row 7FFE, active low.
+; SPACE is bit 0 of keyboard row 7F7F, active low.
 ; -------------------------------------------------------------------------
 SpectrumPrint:
         LD      A,(HL)
@@ -609,7 +609,7 @@ SpectrumShowWriteComplete:
         RET
 
 WaitSpace:
-        LD      BC,$7FFE
+        LD      BC,$7F7F
 WaitSpacePress:
         IN      A,(C)
         AND     1
