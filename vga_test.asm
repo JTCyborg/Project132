@@ -357,7 +357,12 @@ ModeFillBank:
         LD      BC,$03DF
         OUT     (C),A
         LD      HL,$C000
+        LD      A,(ModeBpp)
+        CP      8
         LD      DE,ModePattern
+        JR      NZ,ModeFillPatternSelected
+        LD      DE,ModePattern8
+ModeFillPatternSelected:
         LD      A,(CurrentBank)
         LD      B,A
         LD      A,(ModeBankCount)
@@ -378,6 +383,18 @@ ModeFillByte:
         INC     DE
         LD      (HL),A
         INC     HL
+        LD      A,(ModeBpp)
+        CP      8
+        JR      NZ,ModePatternCheckRgb
+        LD      A,D
+        CP      HIGH ModePattern8End
+        JR      NZ,ModePatternReady
+        LD      A,E
+        CP      LOW ModePattern8End
+        JR      NZ,ModePatternReady
+        LD      DE,ModePattern8
+        JR      ModePatternReady
+ModePatternCheckRgb:
         LD      A,D
         CP      HIGH ModePatternEnd
         JR      NZ,ModePatternReady
@@ -857,6 +874,13 @@ SpectrumGlyphLine: DB 0
 SpectrumGlyphByte: DB 0
 SpectrumFontPtr: DW 0
 
+; 8-BPP pixels are palette indices, not RGB565 bytes. Use the
+; adapter's initialized EGA palette (entries 0..7) for visible colour bars.
+ModePattern8:
+        DB $00,$00,$01,$01,$02,$02,$03,$03,$04,$04,$05,$05,$06,$06,$07,$07
+ModePattern8End:
+
+; RGB565 byte sequence used by the packed direct-colour test modes.
 ModePattern:
         DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
 ModePatternEnd:
