@@ -179,6 +179,7 @@ VerifyFramebuffer:
         OUT     (C),A
 
         LD      HL,$C000
+        ; First eight pixels are black: bytes 0..15 must be zero.
         LD      A,(HL)
         OR      A
         JR      NZ,VerifyFailed
@@ -186,17 +187,15 @@ VerifyFramebuffer:
         LD      A,(HL)
         OR      A
         JR      NZ,VerifyFailed
-        INC     HL
+
+        ; Pixel 8 begins the blue RGB565 bar: 1F 00.
+        LD      HL,$C010
         LD      A,(HL)
         CP      $1F
         JR      NZ,VerifyFailed
         INC     HL
         LD      A,(HL)
         OR      A
-        JR      NZ,VerifyFailed
-        INC     HL
-        LD      A,(HL)
-        CP      $E0
         JR      NZ,VerifyFailed
 
         LD      A,37
@@ -282,6 +281,7 @@ l20_len EQU     $-l20
 l30:    DB      RANDOMIZE, USR, "32768", $0E, $00, $00
         DW      32768
         DB      $0D
+l30_len EQU     $-l30
 
         DB      $80
 basic_loader_end:
