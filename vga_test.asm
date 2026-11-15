@@ -23,6 +23,10 @@ VgaTestEntry:
         DI
         LD      SP,$BFFF
 
+        ; ROM PRINT-OUT/CLS need the normal Spectrum interrupt environment.
+        EI
+        CALL    SpectrumShowStartup
+
         LD      HL,MsgBuild
         CALL    DebugPrint
         LD      HL,MsgStart
@@ -254,25 +258,25 @@ PackedModeNext:
         LD      (ModeBpp),A
         LD      (ModeTablePtr),HL
 
-        LD      A,0
         LD      A,(ModeXLo)
         LD      E,A
+        LD      A,0
         CALL    WriteVgaRegister
-        LD      A,1
         LD      A,(ModeXHi)
         LD      E,A
+        LD      A,1
         CALL    WriteVgaRegister
-        LD      A,2
         LD      A,(ModeYLo)
         LD      E,A
+        LD      A,2
         CALL    WriteVgaRegister
-        LD      A,3
         LD      A,(ModeYHi)
         LD      E,A
+        LD      A,3
         CALL    WriteVgaRegister
-        LD      A,4
         LD      A,(ModeBpp)
         LD      E,A
+        LD      A,4
         CALL    WriteVgaRegister
         LD      A,5
         LD      E,1
@@ -297,10 +301,11 @@ PackedModeNext:
         LD      HL,MsgBppSuffix
         CALL    DebugPrint
 
-        CALL    FillModeVRAM
-
-        ; Show the exact active test on the Spectrum screen and wait for SPACE.
+        ; Show the selected mode BEFORE the long 1 MiB VRAM fill.
         CALL    SpectrumShowMode
+        CALL    FillModeVRAM
+        CALL    SpectrumShowWriteComplete
+        ; Do not change mode until the user presses and releases SPACE.
         CALL    WaitSpace
 
         LD      A,(ModeIndex)
@@ -547,6 +552,14 @@ SpectrumClear:
         CALL    $0D6B             ; Spectrum ROM CLS
         RET
 
+SpectrumShowStartup:
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenStarting
+        CALL    SpectrumPrint
+        RET
+
 SpectrumShowMode:
         CALL    SpectrumClear
         LD      HL,ScreenTitle
@@ -562,6 +575,29 @@ SpectrumShowMode:
         LD      D,A
         INC     HL
         LD      (ModeLabelPtr),HL
+        EX      DE,HL
+        CALL    SpectrumPrint
+        LD      HL,ScreenTestRunning
+        CALL    SpectrumPrint
+        LD      HL,ScreenWriteRunning
+        CALL    SpectrumPrint
+        RET
+
+SpectrumShowWriteComplete:
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenModeHeading
+        CALL    SpectrumPrint
+        ; Re-read the just-consumed mode label without advancing the table.
+        LD      HL,(ModeLabelPtr)
+        DEC     HL
+        DEC     HL
+        LD      A,(HL)
+        LD      E,A
+        INC     HL
+        LD      A,(HL)
+        LD      D,A
         EX      DE,HL
         CALL    SpectrumPrint
         LD      HL,ScreenTestRunning
@@ -680,8 +716,10 @@ MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
 MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
 
 ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
+ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA MODE:",13,0
 ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VRAM",13,0
+ScreenWriteRunning:DEFM "RESULT: WRITING...",13,13,0
 ScreenWritePassed: DEFM "RESULT: VRAM WRITE COMPLETE",13,13,0
 ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
 ScreenAllDone:     DEFM "ALL 13 VGA MODES TESTED",13,13,"RESET TO RUN AGAIN",0
