@@ -294,6 +294,8 @@ PackedModeNext:
         CALL    DebugPrint
 
         CALL    FillModeVRAM
+        ; Draw the standard Spectrum ROM 8x8 font into the packed framebuffer.
+        CALL    DrawSpectrumBanner
         CALL    ModeHoldDelay
 
         LD      A,(ModeCount)
@@ -349,6 +351,148 @@ ModeHoldLoop:
         JR      NZ,ModeHoldLoop
         RET
 
+; -------------------------------------------------------------------------
+; Draw "P132 VGA TEST" with the Spectrum ROM character set.
+; The standard 8x8 ROM font starts at 3D00h (character 32).
+; Draws one 104-pixel line at the top of bank 0. The chosen modes keep
+; the complete 8 scanlines inside the first 16 KiB aperture bank.
+; -------------------------------------------------------------------------
+DrawSpectrumBanner:
+        ; Select framebuffer bank zero.
+        XOR     A
+        LD      BC,$03DF
+        OUT     (C),A
+
+        ; Bytes per pixel: ceil(BPP/8).
+        LD      A,(ModeBpp)
+        CP      8
+        LD      A,1
+        JR      Z,DrawBytesReady
+        LD      A,(ModeBpp)
+        CP      16
+        LD      A,2
+        JR      C,DrawBytesReady
+        JR      Z,DrawBytesReady
+        LD      A,(ModeBpp)
+        CP      24
+        LD      A,3
+        JR      C,DrawBytesReady
+        JR      Z,DrawBytesReady
+        LD      A,4
+DrawBytesReady:
+        LD      (DrawBytes),A
+
+        ; Calculate pitch = X resolution * bytes per pixel.
+        LD      A,(ModeXLo)
+        LD      L,A
+        LD      A,(ModeXHi)
+        LD      H,A
+        EX      DE,HL
+        LD      HL,0
+        LD      A,(DrawBytes)
+DrawPitchLoop:
+        ADD     HL,DE
+        DEC     A
+        JR      NZ,DrawPitchLoop
+        LD      (DrawPitch),HL
+
+        XOR     A
+        LD      (DrawRow),A
+        LD      (DrawRowBase),A
+        LD      (DrawRowBase+1),A
+
+DrawBannerRow:
+        ; Start this scanline at C000h + row * pitch.
+        LD      HL,(DrawRowBase)
+        LD      DE,$C000
+        ADD     HL,DE
+        LD      (DrawPixelPtr),HL
+        LD      HL,DrawBannerText
+        LD      (DrawStringPtr),HL
+
+DrawBannerChar:
+        LD      HL,(DrawStringPtr)
+        LD      A,(HL)
+        OR      A
+        JR      Z,DrawBannerRowDone
+        INC     HL
+        LD      (DrawStringPtr),HL
+
+        ; Font address = 3D00h + (ASCII - 20h) * 8 + scanline.
+        SUB     32
+        LD      L,A
+        LD      H,0
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      DE,$3D00
+        ADD     HL,DE
+        LD      A,(DrawRow)
+        LD      E,A
+        LD      D,0
+        ADD     HL,DE
+        LD      A,(HL)
+        LD      (DrawGlyphBits),A
+        LD      A,8
+        LD      (DrawPixelCount),A
+
+DrawBannerPixel:
+        LD      A,(DrawGlyphBits)
+        RLCA
+        LD      (DrawGlyphBits),A
+        LD      A,0
+        JR      NC,DrawBannerPixelInkReady
+        LD      A,1
+DrawBannerPixelInkReady:
+        LD      (DrawInk),A
+        CALL    DrawBannerPutPixel
+        LD      A,(DrawPixelCount)
+        DEC     A
+        LD      (DrawPixelCount),A
+        JR      NZ,DrawBannerPixel
+        JR      DrawBannerChar
+
+DrawBannerRowDone:
+        LD      HL,(DrawRowBase)
+        LD      DE,(DrawPitch)
+        ADD     HL,DE
+        LD      (DrawRowBase),HL
+        LD      A,(DrawRow)
+        INC     A
+        LD      (DrawRow),A
+        CP      8
+        JR      NZ,DrawBannerRow
+        RET
+
+; Write one foreground/background pixel and advance the linear pointer.
+DrawBannerPutPixel:
+        LD      HL,(DrawPixelPtr)
+        LD      A,(DrawInk)
+        OR      A
+        JR      Z,DrawBannerBackground
+        LD      A,(ModeBpp)
+        CP      8
+        LD      A,$FF
+        JR      NZ,DrawBannerPixelValueReady
+        LD      A,$0F               ; EGA palette entry 15 = white.
+        JR      DrawBannerPixelValueReady
+DrawBannerBackground:
+        XOR     A
+DrawBannerPixelValueReady:
+        LD      C,A
+        LD      A,(DrawBytes)
+        LD      B,A
+        LD      A,C
+DrawBannerPutPixelByte:
+        LD      (HL),A
+        INC     HL
+        DJNZ    DrawBannerPutPixelByte
+        LD      (DrawPixelPtr),HL
+        RET
+
+DrawBannerText:
+        DEFM    "P132 VGA TEST",0
+
 DebugHexByte:
         PUSH    AF
         RRCA
@@ -390,6 +534,15 @@ ModeXHi:      DB 0
 ModeYLo:      DB 0
 ModeYHi:      DB 0
 ModeBpp:      DB 0
+DrawBytes:    DB 0
+DrawRow:      DB 0
+DrawPixelCount: DB 0
+DrawGlyphBits: DB 0
+DrawInk:      DB 0
+DrawPitch:    DW 0
+DrawRowBase:  DW 0
+DrawPixelPtr: DW 0
+DrawStringPtr: DW 0
 
 ModePattern:
         DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
