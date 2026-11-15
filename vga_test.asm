@@ -220,6 +220,13 @@ TwoDCursorBitmap:
         LD      A,$11
         LD      E,0
         CALL    Write2DRegister
+        ; Source rectangle starts on the same Y=10 row as the filled area.
+        LD      A,$12
+        LD      E,10
+        CALL    Write2DRegister
+        LD      A,$13
+        LD      E,0
+        CALL    Write2DRegister
         LD      A,$14
         LD      E,30
         CALL    Write2DRegister
