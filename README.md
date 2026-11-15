@@ -19,7 +19,7 @@ The guest program targets the software VGA/SVGA interface implemented by Project
 - Reads back the first bytes from bank 0 and the last visible byte from bank 37.
 - Sends progress and PASS/FAIL messages to port `EFh`.
 
-Expected picture: eight repeating RGB565 colour stripes in the separate **ISA VGA Adapter** window.
+Expected picture: eight RGB565 vertical colour bars in the separate **ISA VGA Adapter** window.
 
 ## Important
 
