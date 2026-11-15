@@ -559,7 +559,7 @@ SpectrumPrint:
         RET     Z
         INC     HL
         CP      13
-        JR      Z,SpectrumPrintNewLine
+        JP      Z,SpectrumPrintNewLine
         CP      32
         JR      C,SpectrumPrint
         CP      128
@@ -654,11 +654,11 @@ SpectrumAttrAddressReady:
 SpectrumCursorYReady:
         LD      (SpectrumCursorY),A
         POP     HL
-        JR      SpectrumPrint
+        JP      SpectrumPrint
 SpectrumCursorXReady:
         LD      (SpectrumCursorX),A
         POP     HL
-        JR      SpectrumPrint
+        JP      SpectrumPrint
 
 SpectrumPrintNewLine:
         XOR     A
@@ -670,7 +670,7 @@ SpectrumPrintNewLine:
         XOR     A
 SpectrumNewLineYReady:
         LD      (SpectrumCursorY),A
-        JR      SpectrumPrint
+        JP      SpectrumPrint
 
 SpectrumClear:
         XOR     A
