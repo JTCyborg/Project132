@@ -73,6 +73,9 @@ VgaTestEntry:
 
         LD      HL,MsgReadbackPass
         CALL    DebugPrint
+
+        CALL    RunPackedModeSweep
+
         LD      HL,MsgReady
         CALL    DebugPrint
 
@@ -213,6 +216,159 @@ VerifyFailed:
         LD      A,1
         RET
 
+
+; -------------------------------------------------------------------------
+; Sweep every packed-pixel mode accepted by the Project131 1 MiB adapter.
+; Supported combinations are taken from docs/ISA_VGA_Adapter.md.
+; Each mode is selected, the entire 1 MiB aperture is written, then held
+; briefly so the VGA window can be inspected before advancing.
+; -------------------------------------------------------------------------
+RunPackedModeSweep:
+        LD      HL,MsgSweepStart
+        CALL    DebugPrint
+        LD      HL,PackedModeTable
+        LD      (ModeTablePtr),HL
+        LD      A,13
+        LD      (ModeCount),A
+
+PackedModeNext:
+        LD      HL,(ModeTablePtr)
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeXLo),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeXHi),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeYLo),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeYHi),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeBpp),A
+        LD      (ModeTablePtr),HL
+
+        LD      A,0
+        LD      A,(ModeXLo)
+        LD      E,A
+        CALL    WriteVgaRegister
+        LD      A,1
+        LD      A,(ModeXHi)
+        LD      E,A
+        CALL    WriteVgaRegister
+        LD      A,2
+        LD      A,(ModeYLo)
+        LD      E,A
+        CALL    WriteVgaRegister
+        LD      A,3
+        LD      A,(ModeYHi)
+        LD      E,A
+        CALL    WriteVgaRegister
+        LD      A,4
+        LD      A,(ModeBpp)
+        LD      E,A
+        CALL    WriteVgaRegister
+        LD      A,5
+        LD      E,1
+        CALL    WriteVgaRegister
+
+        LD      HL,MsgModePrefix
+        CALL    DebugPrint
+        LD      A,(ModeXHi)
+        CALL    DebugHexByte
+        LD      A,(ModeXLo)
+        CALL    DebugHexByte
+        LD      A,'x'
+        OUT     ($EF),A
+        LD      A,(ModeYHi)
+        CALL    DebugHexByte
+        LD      A,(ModeYLo)
+        CALL    DebugHexByte
+        LD      A,' '
+        OUT     ($EF),A
+        LD      A,(ModeBpp)
+        CALL    DebugHexByte
+        LD      HL,MsgBppSuffix
+        CALL    DebugPrint
+
+        CALL    FillModeVRAM
+        CALL    ModeHoldDelay
+
+        LD      A,(ModeCount)
+        DEC     A
+        LD      (ModeCount),A
+        JR      NZ,PackedModeNext
+        LD      HL,MsgSweepDone
+        CALL    DebugPrint
+        RET
+
+; Fill 1 MiB with a repeating RGB/index-friendly byte pattern.
+; All 64 banks are written so the test covers the full VRAM aperture.
+FillModeVRAM:
+        XOR     A
+        LD      (CurrentBank),A
+ModeFillBank:
+        LD      A,(CurrentBank)
+        LD      BC,$03DF
+        OUT     (C),A
+        LD      HL,$C000
+        LD      DE,ModePattern
+        LD      BC,$4000
+ModeFillByte:
+        LD      A,(DE)
+        INC     DE
+        LD      (HL),A
+        INC     HL
+        LD      A,D
+        CP      HIGH ModePatternEnd
+        JR      NZ,ModePatternReady
+        LD      A,E
+        CP      LOW ModePatternEnd
+        JR      NZ,ModePatternReady
+        LD      DE,ModePattern
+ModePatternReady:
+        DEC     BC
+        LD      A,B
+        OR      C
+        JR      NZ,ModeFillByte
+        LD      A,(CurrentBank)
+        INC     A
+        LD      (CurrentBank),A
+        CP      64
+        JR      NZ,ModeFillBank
+        RET
+
+ModeHoldDelay:
+        LD      DE,$FFFF
+ModeHoldLoop:
+        DEC     DE
+        LD      A,D
+        OR      E
+        JR      NZ,ModeHoldLoop
+        RET
+
+DebugHexByte:
+        PUSH    AF
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        CALL    DebugHexNibble
+        POP     AF
+        CALL    DebugHexNibble
+        RET
+DebugHexNibble:
+        AND     $0F
+        ADD     A,'0'
+        CP      '9'+1
+        JR      C,DebugHexOut
+        ADD     A,7
+DebugHexOut:
+        OUT     ($EF),A
+        RET
+
 ; -------------------------------------------------------------------------
 ; Port EF text logger (ASCII bytes, same convention as Project112).
 ; -------------------------------------------------------------------------
@@ -225,6 +381,36 @@ DebugPrint:
         JR      DebugPrint
 
 CurrentBank: DB 0
+
+
+ModeTablePtr: DW 0
+ModeCount:    DB 0
+ModeXLo:      DB 0
+ModeXHi:      DB 0
+ModeYLo:      DB 0
+ModeYHi:      DB 0
+ModeBpp:      DB 0
+
+ModePattern:
+        DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
+ModePatternEnd:
+
+; All and only the packed modes that fit in the adapter's 1 MiB VRAM.
+; Entry: X low, X high, Y low, Y high, bits per pixel.
+PackedModeTable:
+        DB 320&255,320>>8,200&255,200>>8,8
+        DB 320&255,320>>8,200&255,200>>8,15
+        DB 320&255,320>>8,200&255,200>>8,16
+        DB 320&255,320>>8,200&255,200>>8,24
+        DB 320&255,320>>8,200&255,200>>8,32
+        DB 640&255,640>>8,480&255,480>>8,8
+        DB 640&255,640>>8,480&255,480>>8,15
+        DB 640&255,640>>8,480&255,480>>8,16
+        DB 640&255,640>>8,480&255,480>>8,24
+        DB 800&255,800>>8,600&255,600>>8,8
+        DB 800&255,800>>8,600&255,600>>8,15
+        DB 800&255,800>>8,600&255,600>>8,16
+        DB 1024&255,1024>>8,768&255,768>>8,8
 
 ColorPattern:
         ; Eight RGB565 colours, each repeated for eight adjacent pixels.
@@ -247,6 +433,10 @@ MsgFrameWritten: DEFM "VRAM 614400 BYTES WRITTEN",13,10,0
 MsgReadbackPass: DEFM "VRAM READBACK PASS",13,10,0
 MsgReadbackFail: DEFM "VRAM READBACK FAIL",13,10,0
 MsgReady:        DEFM "VGA TEST COMPLETE - CHECK VGA WINDOW",13,10,0
+MsgSweepStart:   DEFM "PACKED SVGA MODE SWEEP START",13,10,0
+MsgModePrefix:   DEFM "MODE ",0
+MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
+MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
 
 ProgramEnd:
 
