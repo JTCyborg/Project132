@@ -313,6 +313,11 @@ PackedModeNext:
         JP      NZ,PackedModeNext
         LD      HL,MsgSweepDone
         CALL    DebugPrint
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenAllDone
+        CALL    SpectrumPrint
         RET
 
 ; Fill 1 MiB with a repeating RGB/index-friendly byte pattern.
@@ -548,7 +553,16 @@ SpectrumShowMode:
         CALL    SpectrumPrint
         LD      HL,ScreenModeHeading
         CALL    SpectrumPrint
+        ; Fetch and advance the pointer in the mode-label pointer table.
         LD      HL,(ModeLabelPtr)
+        LD      A,(HL)
+        LD      E,A
+        INC     HL
+        LD      A,(HL)
+        LD      D,A
+        INC     HL
+        LD      (ModeLabelPtr),HL
+        EX      DE,HL
         CALL    SpectrumPrint
         LD      HL,ScreenTestRunning
         CALL    SpectrumPrint
@@ -670,6 +684,7 @@ ScreenModeHeading: DEFM "CURRENT VGA MODE:",13,0
 ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VRAM",13,0
 ScreenWritePassed: DEFM "RESULT: VRAM WRITE COMPLETE",13,13,0
 ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
+ScreenAllDone:     DEFM "ALL 13 VGA MODES TESTED",13,13,"RESET TO RUN AGAIN",0
 
 ProgramEnd:
 
