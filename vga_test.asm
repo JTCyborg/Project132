@@ -713,7 +713,7 @@ SpectrumShowInitialMode:
         CALL    SpectrumPrint
         LD      HL,ScreenInitialMode
         CALL    SpectrumPrint
-        LD      HL,ScreenTestRunning
+        LD      HL,ScreenInitialTestRunning
         CALL    SpectrumPrint
         LD      HL,ScreenWriteRunning
         CALL    SpectrumPrint
@@ -748,7 +748,7 @@ SpectrumShowMode:
         LD      (ModeLabelPtr),HL
         EX      DE,HL
         CALL    SpectrumPrint
-        LD      HL,ScreenTestRunning
+        LD      HL,ScreenInitialTestRunning
         CALL    SpectrumPrint
         LD      HL,ScreenWriteRunning
         CALL    SpectrumPrint
@@ -898,6 +898,7 @@ ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
 ScreenOpeningPorts: DEFM "OPENING ATM SHADOW PORTS...",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA TEST CONFIGURATION:",13,13,0
 ScreenInitialMode: DEFM "INITIAL TEST 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
+ScreenInitialTestRunning: DEFM "TEST: WRITE 640x480 FRAMEBUFFER",13,0
 ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VIDEO RAM",13,0
 ScreenWriteRunning:DEFM "STATUS: WRITING - PLEASE WAIT",13,13,0
 ScreenWritePassed: DEFM "STATUS: WRITE COMPLETE",13,13,0
