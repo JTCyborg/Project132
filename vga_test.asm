@@ -748,7 +748,7 @@ SpectrumShowMode:
         LD      (ModeLabelPtr),HL
         EX      DE,HL
         CALL    SpectrumPrint
-        LD      HL,ScreenInitialTestRunning
+        LD      HL,ScreenTestRunning
         CALL    SpectrumPrint
         LD      HL,ScreenWriteRunning
         CALL    SpectrumPrint
