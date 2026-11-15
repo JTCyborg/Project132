@@ -727,7 +727,7 @@ SpectrumShowInitialWriteComplete:
         CALL    SpectrumPrint
         LD      HL,ScreenInitialMode
         CALL    SpectrumPrint
-        LD      HL,ScreenTestRunning
+        LD      HL,ScreenInitialTestRunning
         CALL    SpectrumPrint
         LD      HL,ScreenWritePassed
         CALL    SpectrumPrint
