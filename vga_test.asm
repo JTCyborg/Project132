@@ -37,6 +37,9 @@ VgaTestEntry:
         LD      HL,MsgAdapterInit
         CALL    DebugPrint
 
+        ; The initial framebuffer test is also identified on the Spectrum screen.
+        CALL    SpectrumShowInitialMode
+
         ; 3DEh: software mode = 1, aperture enable = 1, bank 0.
         LD      BC,$03DE
         LD      A,$03
@@ -70,6 +73,7 @@ VgaTestEntry:
 
         LD      HL,MsgFrameWritten
         CALL    DebugPrint
+        CALL    SpectrumShowInitialWriteComplete
 
         CALL    VerifyFramebuffer
         OR      A
@@ -560,6 +564,30 @@ SpectrumShowStartup:
         CALL    SpectrumPrint
         RET
 
+SpectrumShowInitialMode:
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenInitialMode
+        CALL    SpectrumPrint
+        LD      HL,ScreenTestRunning
+        CALL    SpectrumPrint
+        LD      HL,ScreenWriteRunning
+        CALL    SpectrumPrint
+        RET
+
+SpectrumShowInitialWriteComplete:
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenInitialMode
+        CALL    SpectrumPrint
+        LD      HL,ScreenTestRunning
+        CALL    SpectrumPrint
+        LD      HL,ScreenWritePassed
+        CALL    SpectrumPrint
+        RET
+
 SpectrumShowMode:
         CALL    SpectrumClear
         LD      HL,ScreenTitle
@@ -719,6 +747,7 @@ MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
 ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
 ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA TEST CONFIGURATION:",13,13,0
+ScreenInitialMode: DEFM "INITIAL TEST 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
 ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VIDEO RAM",13,0
 ScreenWriteRunning:DEFM "STATUS: WRITING - PLEASE WAIT",13,13,0
 ScreenWritePassed: DEFM "STATUS: WRITE COMPLETE",13,13,0
