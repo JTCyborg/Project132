@@ -1,0 +1,384 @@
+# file opened: vga_test.asm
+  1   0000              ; =========================================================================
+  2   0000              ; PROJECT132 — ATM TURBO 2+ VGA ADAPTER TEST
+  3   0000              ; Based on the proven ATM startup/ROM trampoline from Project112.
+  4   0000              ; Target adapter: Project131 ISA VGA/SVGA software interface.
+  5   0000              ;
+  6   0000              ; Test:
+  7   0000              ;   - unlock ATM shadow ports through TR-DOS ROM
+  8   0000              ;   - enable VGA software mode + 16 KiB aperture
+  9   0000              ;   - program 640x480 RGB565 through 3E0h/3E1h
+ 10   0000              ;   - fill 614400 bytes of linear VRAM through 38 aperture banks
+ 11   0000              ;   - read back bytes from bank 0 and the last framebuffer bank
+ 12   0000              ;   - report results on port EF (spectrum_out.txt)
+ 13   0000              ;
+ 14   0000              ; Expected image: eight-colour RGB565 vertical bars.
+ 15   0000              ; =========================================================================
+ 16   0000
+ 17   0000                      DEVICE ZXSPECTRUM128
+ 18   0000                      EMPTYTRD "vga_test.TRD"
+ 19   0000
+ 20   0000                      ORG     $8000
+ 21   8000
+ 22   8000              VgaTestEntry:
+ 23   8000 F3                   DI
+ 24   8001 31 FF BF             LD      SP,$BFFF
+ 25   8004
+ 26   8004 21 97 81             LD      HL,MsgBuild
+ 27   8007 CD 0E 81             CALL    DebugPrint
+ 28   800A 21 AE 81             LD      HL,MsgStart
+ 29   800D CD 0E 81             CALL    DebugPrint
+ 30   8010
+ 31   8010 CD 77 80             CALL    OpenATMShadowPorts
+ 32   8013
+ 33   8013 21 CB 81             LD      HL,MsgAdapterInit
+ 34   8016 CD 0E 81             CALL    DebugPrint
+ 35   8019
+ 36   8019                      ; 3DEh: software mode = 1, aperture enable = 1, bank 0.
+ 37   8019 01 DE 03             LD      BC,$03DE
+ 38   801C 3E 03                LD      A,$03
+ 39   801E ED 79                OUT     (C),A
+ 40   8020
+ 41   8020                      ; Configure packed-pixel 640x480 RGB565:
+ 42   8020                      ; XRES = 0280h, YRES = 01E0h, BPP = 16, ENABLE = 1.
+ 43   8020 3E 00                LD      A,0
+ 44   8022 1E 80                LD      E,$80
+ 45   8024 CD 88 80             CALL    WriteVgaRegister
+ 46   8027 3E 01                LD      A,1
+ 47   8029 1E 02                LD      E,$02
+ 48   802B CD 88 80             CALL    WriteVgaRegister
+ 49   802E 3E 02                LD      A,2
+ 50   8030 1E E0                LD      E,$E0
+ 51   8032 CD 88 80             CALL    WriteVgaRegister
+ 52   8035 3E 03                LD      A,3
+ 53   8037 1E 01                LD      E,$01
+ 54   8039 CD 88 80             CALL    WriteVgaRegister
+ 55   803C 3E 04                LD      A,4
+ 56   803E 1E 10                LD      E,16
+ 57   8040 CD 88 80             CALL    WriteVgaRegister
+ 58   8043 3E 05                LD      A,5
+ 59   8045 1E 01                LD      E,1
+ 60   8047 CD 88 80             CALL    WriteVgaRegister
+ 61   804A
+ 62   804A 21 E2 81             LD      HL,MsgModeSet
+ 63   804D CD 0E 81             CALL    DebugPrint
+ 64   8050
+ 65   8050 CD 92 80             CALL    Fill640x480x16
+ 66   8053
+ 67   8053 21 FC 81             LD      HL,MsgFrameWritten
+ 68   8056 CD 0E 81             CALL    DebugPrint
+ 69   8059
+ 70   8059 CD D7 80             CALL    VerifyFramebuffer
+ 71   805C B7                   OR      A
+ 72   805D 20 0F                JR      NZ,VgaTestFailed
+ 73   805F
+ 74   805F 21 18 82             LD      HL,MsgReadbackPass
+ 75   8062 CD 0E 81             CALL    DebugPrint
+ 76   8065 21 42 82             LD      HL,MsgReady
+ 77   8068 CD 0E 81             CALL    DebugPrint
+ 78   806B
+ 79   806B              VgaTestIdle:
+ 80   806B 76                   HALT
+ 81   806C 18 FD                JR      VgaTestIdle
+ 82   806E
+ 83   806E              VgaTestFailed:
+ 84   806E 21 2D 82             LD      HL,MsgReadbackFail
+ 85   8071 CD 0E 81             CALL    DebugPrint
+ 86   8074              VgaTestFailedIdle:
+ 87   8074 76                   HALT
+ 88   8075 18 FD                JR      VgaTestFailedIdle
+ 89   8077
+ 90   8077              ; -------------------------------------------------------------------------
+ 91   8077              ; ATM Turbo 2+ shadow-port unlock, copied from the working Project112 flow.
+ 92   8077              ; TR-DOS ROM entry #3D2F calls OUT (C),A at #2A53.
+ 93   8077              ; -------------------------------------------------------------------------
+ 94   8077              OpenATMShadowPorts:
+ 95   8077 01 87 80             LD      BC,ShadowPortsOpened
+ 96   807A C5                   PUSH    BC
+ 97   807B 01 53 2A             LD      BC,$2A53
+ 98   807E C5                   PUSH    BC
+ 99   807F 01 77 01             LD      BC,$0177
+100   8082 3E C3                LD      A,$C3
+101   8084 C3 2F 3D             JP      $3D2F
+102   8087              ShadowPortsOpened:
+103   8087 C9                   RET
+104   8088
+105   8088              ; A = indexed VGA register, E = value.
+106   8088              WriteVgaRegister:
+107   8088 01 E0 03             LD      BC,$03E0
+108   808B ED 79                OUT     (C),A
+109   808D 7B                   LD      A,E
+110   808E 0C                   INC     C
+111   808F ED 79                OUT     (C),A
+112   8091 C9                   RET
+113   8092
+114   8092              ; -------------------------------------------------------------------------
+115   8092              ; Fill the 640x480x16 framebuffer.
+116   8092              ; Size = 614400 bytes = 37 full 16 KiB banks + 8192 bytes in bank 37.
+117   8092              ; The aperture C000h-FFFFh is switched with port 3DFh.
+118   8092              ; -------------------------------------------------------------------------
+119   8092              Fill640x480x16:
+120   8092 AF                   XOR     A
+121   8093 32 16 81             LD      (CurrentBank),A
+122   8096
+123   8096              FillBankLoop:
+124   8096 3A 16 81             LD      A,(CurrentBank)
+125   8099 01 DF 03             LD      BC,$03DF
+126   809C ED 79                OUT     (C),A
+127   809E
+128   809E 21 00 C0             LD      HL,$C000
+129   80A1 11 17 81             LD      DE,ColorPattern
+130   80A4 3A 16 81             LD      A,(CurrentBank)
+131   80A7 FE 25                CP      37
+132   80A9 28 05                JR      Z,FillLastHalfBank
+133   80AB 01 00 40             LD      BC,$4000
+134   80AE 18 03                JR      FillBankBytes
+135   80B0
+136   80B0              FillLastHalfBank:
+137   80B0 01 00 20             LD      BC,$2000
+138   80B3
+139   80B3              FillBankBytes:
+140   80B3 1A                   LD      A,(DE)
+141   80B4 13                   INC     DE
+142   80B5 77                   LD      (HL),A
+143   80B6 23                   INC     HL
+144   80B7
+145   80B7                      ; Repeat the 128-byte RGB565 colour-bar sequence.
+146   80B7 F5                   PUSH    AF
+147   80B8 7A                   LD      A,D
+148   80B9 FE 81                CP      HIGH ColorPatternEnd
+149   80BB 20 08                JR      NZ,PatternPointerReady
+150   80BD 7B                   LD      A,E
+151   80BE FE 97                CP      LOW ColorPatternEnd
+152   80C0 20 03                JR      NZ,PatternPointerReady
+153   80C2 11 17 81             LD      DE,ColorPattern
+154   80C5              PatternPointerReady:
+155   80C5 F1                   POP     AF
+156   80C6
+157   80C6 0B                   DEC     BC
+158   80C7 78                   LD      A,B
+159   80C8 B1                   OR      C
+160   80C9 20 E8                JR      NZ,FillBankBytes
+161   80CB
+162   80CB 3A 16 81             LD      A,(CurrentBank)
+163   80CE 3C                   INC     A
+164   80CF 32 16 81             LD      (CurrentBank),A
+165   80D2 FE 26                CP      38
+166   80D4 20 C0                JR      NZ,FillBankLoop
+167   80D6 C9                   RET
+168   80D7
+169   80D7              ; -------------------------------------------------------------------------
+170   80D7              ; Readback checks:
+171   80D7              ; bank 0 starts with 00 00 1F 00 E0 07 FF 07.
+172   80D7              ; bank 37 starts at linear offset 37*4000h = 5E000h.
+173   80D7              ; The final byte of the 640x480 framebuffer is bank 37 offset 1FFFh = FF.
+174   80D7              ; Return A=0 on success, A=1 on mismatch.
+175   80D7              ; -------------------------------------------------------------------------
+176   80D7              VerifyFramebuffer:
+177   80D7 AF                   XOR     A
+178   80D8 01 DF 03             LD      BC,$03DF
+179   80DB ED 79                OUT     (C),A
+180   80DD
+181   80DD 21 00 C0             LD      HL,$C000
+182   80E0 7E                   LD      A,(HL)
+183   80E1 B7                   OR      A
+184   80E2 20 27                JR      NZ,VerifyFailed
+185   80E4 23                   INC     HL
+186   80E5 7E                   LD      A,(HL)
+187   80E6 B7                   OR      A
+188   80E7 20 22                JR      NZ,VerifyFailed
+189   80E9 23                   INC     HL
+190   80EA 7E                   LD      A,(HL)
+191   80EB FE 1F                CP      $1F
+192   80ED 20 1C                JR      NZ,VerifyFailed
+193   80EF 23                   INC     HL
+194   80F0 7E                   LD      A,(HL)
+195   80F1 B7                   OR      A
+196   80F2 20 17                JR      NZ,VerifyFailed
+197   80F4 23                   INC     HL
+198   80F5 7E                   LD      A,(HL)
+199   80F6 FE E0                CP      $E0
+200   80F8 20 11                JR      NZ,VerifyFailed
+201   80FA
+202   80FA 3E 25                LD      A,37
+203   80FC 01 DF 03             LD      BC,$03DF
+204   80FF ED 79                OUT     (C),A
+205   8101 21 FF DF             LD      HL,$DFFF
+206   8104 7E                   LD      A,(HL)
+207   8105 FE FF                CP      $FF
+208   8107 20 02                JR      NZ,VerifyFailed
+209   8109
+210   8109 AF                   XOR     A
+211   810A C9                   RET
+212   810B
+213   810B              VerifyFailed:
+214   810B 3E 01                LD      A,1
+215   810D C9                   RET
+216   810E
+217   810E              ; -------------------------------------------------------------------------
+218   810E              ; Port EF text logger (ASCII bytes, same convention as Project112).
+219   810E              ; -------------------------------------------------------------------------
+220   810E              DebugPrint:
+221   810E 7E                   LD      A,(HL)
+222   810F B7                   OR      A
+223   8110 C8                   RET     Z
+224   8111 D3 EF                OUT     ($EF),A
+225   8113 23                   INC     HL
+226   8114 18 F8                JR      DebugPrint
+227   8116
+228   8116 00           CurrentBank: DB 0
+229   8117
+230   8117              ColorPattern:
+231   8117                      ; Eight RGB565 colours, each repeated for eight adjacent pixels.
+232   8117                      ; This makes eight visible bars, repeated across the 640-pixel row.
+233   8117 00 00 00 00          DB $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
+233   811B 00 00 00 00
+233   811F 00 00 00 00
+233   8123 00 00 00 00
+234   8127 1F 00 1F 00          DB $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00
+234   812B 1F 00 1F 00
+234   812F 1F 00 1F 00
+234   8133 1F 00 1F 00
+235   8137 E0 07 E0 07          DB $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07
+235   813B E0 07 E0 07
+235   813F E0 07 E0 07
+235   8143 E0 07 E0 07
+236   8147 FF 07 FF 07          DB $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07
+236   814B FF 07 FF 07
+236   814F FF 07 FF 07
+236   8153 FF 07 FF 07
+237   8157 00 F8 00 F8          DB $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8
+237   815B 00 F8 00 F8
+237   815F 00 F8 00 F8
+237   8163 00 F8 00 F8
+238   8167 1F F8 1F F8          DB $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8
+238   816B 1F F8 1F F8
+238   816F 1F F8 1F F8
+238   8173 1F F8 1F F8
+239   8177 E0 FF E0 FF          DB $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF
+239   817B E0 FF E0 FF
+239   817F E0 FF E0 FF
+239   8183 E0 FF E0 FF
+240   8187 FF FF FF FF          DB $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF
+240   818B FF FF FF FF
+240   818F FF FF FF FF
+240   8193 FF FF FF FF
+241   8197              ColorPatternEnd:
+242   8197
+243   8197 50 31 33 32  MsgBuild:        DEFM "P132 VGA TEST ATM710",13,10,0
+243   819B 20 56 47 41
+243   819F 20 54 45 53
+243   81A3 54 20 41 54
+243   81A7 4D 37 31 30
+243   81AB 0D 0A 00
+244   81AE 41 54 4D 20  MsgStart:        DEFM "ATM VGA ADAPTER TEST START",13,10,0
+244   81B2 56 47 41 20
+244   81B6 41 44 41 50
+244   81BA 54 45 52 20
+244   81BE 54 45 53 54
+244   81C2 20 53 54 41
+244   81C6 52 54 0D 0A
+244   81CA 00
+245   81CB 56 47 41 20  MsgAdapterInit:  DEFM "VGA SOFTWARE MODE ON",13,10,0
+245   81CF 53 4F 46 54
+245   81D3 57 41 52 45
+245   81D7 20 4D 4F 44
+245   81DB 45 20 4F 4E
+245   81DF 0D 0A 00
+246   81E2 4D 4F 44 45  MsgModeSet:      DEFM "MODE 640X480 RGB565 SET",13,10,0
+246   81E6 20 36 34 30
+246   81EA 58 34 38 30
+246   81EE 20 52 47 42
+246   81F2 35 36 35 20
+246   81F6 53 45 54 0D
+246   81FA 0A 00
+247   81FC 56 52 41 4D  MsgFrameWritten: DEFM "VRAM 614400 BYTES WRITTEN",13,10,0
+247   8200 20 36 31 34
+247   8204 34 30 30 20
+247   8208 42 59 54 45
+247   820C 53 20 57 52
+247   8210 49 54 54 45
+247   8214 4E 0D 0A 00
+248   8218 56 52 41 4D  MsgReadbackPass: DEFM "VRAM READBACK PASS",13,10,0
+248   821C 20 52 45 41
+248   8220 44 42 41 43
+248   8224 4B 20 50 41
+248   8228 53 53 0D 0A
+248   822C 00
+249   822D 56 52 41 4D  MsgReadbackFail: DEFM "VRAM READBACK FAIL",13,10,0
+249   8231 20 52 45 41
+249   8235 44 42 41 43
+249   8239 4B 20 46 41
+249   823D 49 4C 0D 0A
+249   8241 00
+250   8242 56 47 41 20  MsgReady:        DEFM "VGA TEST COMPLETE - CHECK VGA WINDOW",13,10,0
+250   8246 54 45 53 54
+250   824A 20 43 4F 4D
+250   824E 50 4C 45 54
+250   8252 45 20 2D 20
+250   8256 43 48 45 43
+250   825A 4B 20 56 47
+250   825E 41 20 57 49
+250   8262 4E 44 4F 57
+250   8266 0D 0A 00
+251   8269
+252   8269              ProgramEnd:
+253   8269
+254   8269              ; =========================================================================
+255   8269              ; TR-DOS BASIC loader. Loads VGATEST.C at 8000h and starts it.
+256   8269              ; =========================================================================
+257   8269                      ORG     $B000
+258   B000              CLEAR       EQU $FD
+259   B000              LOAD        EQU $EF
+260   B000              CODE        EQU $AF
+261   B000              REM         EQU $EA
+262   B000              RANDOMIZE   EQU $F9
+263   B000              USR         EQU $C0
+264   B000              OUT_CMD     EQU $DF
+265   B000              VAL         EQU $B0
+266   B000
+267   B000              basic_loader:
+268   B000 00 0A                DB      0,10
+269   B002 20 00                DW      l10_len
+270   B004 DF 32 33 39  l10:    DB      OUT_CMD, "239", $0E, $00, $00, $EF, $00, $00, ",", "1", $0E, $00, $00, $01, $00, $00, ":", CLEAR, "32767", $0E, $00, $00, $7F, $FF, $00, $0D
+270   B008 0E 00 00 EF
+270   B00C 00 00 2C 31
+270   B010 0E 00 00 01
+270   B014 00 00 3A FD
+270   B018 33 32 37 36
+270   B01C 37 0E 00 00
+270   B020 7F FF 00 0D
+271   B024              l10_len EQU     $-l10
+272   B024
+273   B024 00 14                DB      0,20
+274   B026 2A 00                DW      l20_len
+275   B028 F9 C0 31 35  l20:    DB      RANDOMIZE, USR, "15619", $0E, $00, $00
+275   B02C 36 31 39 0E
+275   B030 00 00
+276   B032 03 3D                DW      15619
+277   B034 00 3A EA 3A          DB      0, $3A, REM, $3A, "LOAD ", 34, "VGATEST", 34, " CODE 32768", $0D
+277   B038 4C 4F 41 44
+277   B03C 20 22 56 47
+277   B040 41 54 45 53
+277   B044 54 22 20 43
+277   B048 4F 44 45 20
+277   B04C 33 32 37 36
+277   B050 38 0D
+278   B052              l20_len EQU     $-l20
+279   B052
+280   B052 00 1E                DB      0,30
+vga_test.asm(281): error: Label not found: l30_len
+281   B054 00 00                DW      l30_len
+282   B056 F9 C0 33 32  l30:    DB      RANDOMIZE, USR, "32768", $0E, $00, $00
+282   B05A 37 36 38 0E
+282   B05E 00 00
+283   B060 00 80                DW      32768
+284   B062 0D                   DB      $0D
+285   B063
+286   B063 80                   DB      $80
+287   B064              basic_loader_end:
+288   B064
+289   B064                      SAVETRD "vga_test.TRD","boot.B",basic_loader,basic_loader_end-basic_loader,10
+290   B064                      SAVETRD "vga_test.TRD","VGATEST.C",$8000,ProgramEnd-$8000
+291   B064
+# file closed: vga_test.asm
