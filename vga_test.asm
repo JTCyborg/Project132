@@ -299,7 +299,7 @@ PackedModeNext:
         LD      A,(ModeCount)
         DEC     A
         LD      (ModeCount),A
-        JR      NZ,PackedModeNext
+        JP      NZ,PackedModeNext
         LD      HL,MsgSweepDone
         CALL    DebugPrint
         RET
