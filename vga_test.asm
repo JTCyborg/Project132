@@ -865,24 +865,27 @@ ModePatternEnd:
 ; Entry: X low, X high, Y low, Y high, bits per pixel.
 PackedModeTable:
         ; X,Y,BPP,number-of-banks,last-bank-byte-count (16-bit)
+        ; Deliberately alternate small and large resolutions. This forces
+        ; repeated 320->1024, 1024->320, 320->800, 800->320 and
+        ; 320->640 / 640->320 transitions instead of testing only upward.
         DB 320&255,320>>8,200&255,200>>8,8,4,14848&255,14848>>8
+        DB 1024&255,1024>>8,768&255,768>>8,8,48,16384&255,16384>>8
         DB 320&255,320>>8,200&255,200>>8,15,8,13312&255,13312>>8
+        DB 800&255,800>>8,600&255,600>>8,8,30,4864&255,4864>>8
         DB 320&255,320>>8,200&255,200>>8,16,8,13312&255,13312>>8
+        DB 800&255,800>>8,600&255,600>>8,15,59,9728&255,9728>>8
         DB 320&255,320>>8,200&255,200>>8,24,12,11776&255,11776>>8
-        DB 320&255,320>>8,200&255,200>>8,32,16,10240&255,10240>>8
         DB 640&255,640>>8,480&255,480>>8,8,19,12288&255,12288>>8
+        DB 320&255,320>>8,200&255,200>>8,32,16,10240&255,10240>>8
         DB 640&255,640>>8,480&255,480>>8,15,38,8192&255,8192>>8
         DB 640&255,640>>8,480&255,480>>8,16,38,8192&255,8192>>8
-        DB 640&255,640>>8,480&255,480>>8,24,57,4096&255,4096>>8
-        DB 800&255,800>>8,600&255,600>>8,8,30,4864&255,4864>>8
-        DB 800&255,800>>8,600&255,600>>8,15,59,9728&255,9728>>8
         DB 800&255,800>>8,600&255,600>>8,16,59,9728&255,9728>>8
-        DB 1024&255,1024>>8,768&255,768>>8,8,48,16384&255,16384>>8
+        DB 640&255,640>>8,480&255,480>>8,24,57,4096&255,4096>>8
 
 ModeLabelTable:
-        DW ModeLabel01,ModeLabel02,ModeLabel03,ModeLabel04,ModeLabel05
-        DW ModeLabel06,ModeLabel07,ModeLabel08,ModeLabel09
-        DW ModeLabel10,ModeLabel11,ModeLabel12,ModeLabel13
+        DW ModeLabel01,ModeLabel13,ModeLabel02,ModeLabel10,ModeLabel03
+        DW ModeLabel11,ModeLabel04,ModeLabel06,ModeLabel05,ModeLabel07
+        DW ModeLabel08,ModeLabel12,ModeLabel09
 ; Explicit screen descriptions: test number, resolution and colour format.
 ModeLabel01: DEFM "MODE 01 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 8 BPP / 256 COLORS",13,"VRAM: 64000 BYTES",13,13,0
 ModeLabel02: DEFM "MODE 02 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 15 BPP / RGB555",13,"VRAM: 128000 BYTES",13,13,0
