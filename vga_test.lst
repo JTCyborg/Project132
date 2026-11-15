@@ -542,7 +542,7 @@
 538   8328              ; -------------------------------------------------------------------------
 539   8328              ; Spectrum display and keyboard control.
 540   8328              ; RST 10h is the Spectrum ROM PRINT-OUT entry (current channel #2).
-541   8328              ; SPACE is bit 0 of keyboard row 7FFE, active low.
+541   8328              ; SPACE is bit 0 of keyboard row 7F7F, active low.
 542   8328              ; -------------------------------------------------------------------------
 543   8328              SpectrumPrint:
 544   8328 7E                   LD      A,(HL)
@@ -613,7 +613,7 @@
 609   839E C9                   RET
 610   839F
 611   839F              WaitSpace:
-612   839F 01 FE 7F             LD      BC,$7FFE
+612   839F 01 7F 7F             LD      BC,$7F7F
 613   83A2              WaitSpacePress:
 614   83A2 ED 78                IN      A,(C)
 615   83A4 E6 01                AND     1
