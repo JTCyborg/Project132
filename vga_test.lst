@@ -24,15 +24,15 @@
  23   8000 F3                   DI
  24   8001 31 FF BF             LD      SP,$BFFF
  25   8004
- 26   8004 21 F5 82             LD      HL,MsgBuild
- 27   8007 CD 13 82             CALL    DebugPrint
- 28   800A 21 0C 83             LD      HL,MsgStart
- 29   800D CD 13 82             CALL    DebugPrint
+ 26   8004 21 F6 82             LD      HL,MsgBuild
+ 27   8007 CD 14 82             CALL    DebugPrint
+ 28   800A 21 0D 83             LD      HL,MsgStart
+ 29   800D CD 14 82             CALL    DebugPrint
  30   8010
  31   8010 CD 7A 80             CALL    OpenATMShadowPorts
  32   8013
- 33   8013 21 29 83             LD      HL,MsgAdapterInit
- 34   8016 CD 13 82             CALL    DebugPrint
+ 33   8013 21 2A 83             LD      HL,MsgAdapterInit
+ 34   8016 CD 14 82             CALL    DebugPrint
  35   8019
  36   8019                      ; 3DEh: software mode = 1, aperture enable = 1, bank 0.
  37   8019 01 DE 03             LD      BC,$03DE
@@ -60,33 +60,33 @@
  59   8045 1E 01                LD      E,1
  60   8047 CD 8B 80             CALL    WriteVgaRegister
  61   804A
- 62   804A 21 40 83             LD      HL,MsgModeSet
- 63   804D CD 13 82             CALL    DebugPrint
+ 62   804A 21 41 83             LD      HL,MsgModeSet
+ 63   804D CD 14 82             CALL    DebugPrint
  64   8050
  65   8050 CD 95 80             CALL    Fill640x480x16
  66   8053
- 67   8053 21 5A 83             LD      HL,MsgFrameWritten
- 68   8056 CD 13 82             CALL    DebugPrint
+ 67   8053 21 5B 83             LD      HL,MsgFrameWritten
+ 68   8056 CD 14 82             CALL    DebugPrint
  69   8059
  70   8059 CD DA 80             CALL    VerifyFramebuffer
  71   805C B7                   OR      A
  72   805D 20 12                JR      NZ,VgaTestFailed
  73   805F
- 74   805F 21 76 83             LD      HL,MsgReadbackPass
- 75   8062 CD 13 82             CALL    DebugPrint
+ 74   805F 21 77 83             LD      HL,MsgReadbackPass
+ 75   8062 CD 14 82             CALL    DebugPrint
  76   8065
  77   8065 CD 0D 81             CALL    RunPackedModeSweep
  78   8068
- 79   8068 21 A0 83             LD      HL,MsgReady
- 80   806B CD 13 82             CALL    DebugPrint
+ 79   8068 21 A1 83             LD      HL,MsgReady
+ 80   806B CD 14 82             CALL    DebugPrint
  81   806E
  82   806E              VgaTestIdle:
  83   806E 76                   HALT
  84   806F 18 FD                JR      VgaTestIdle
  85   8071
  86   8071              VgaTestFailed:
- 87   8071 21 8B 83             LD      HL,MsgReadbackFail
- 88   8074 CD 13 82             CALL    DebugPrint
+ 87   8071 21 8C 83             LD      HL,MsgReadbackFail
+ 88   8074 CD 14 82             CALL    DebugPrint
  89   8077              VgaTestFailedIdle:
  90   8077 76                   HALT
  91   8078 18 FD                JR      VgaTestFailedIdle
@@ -122,16 +122,16 @@
 121   8095              ; -------------------------------------------------------------------------
 122   8095              Fill640x480x16:
 123   8095 AF                   XOR     A
-124   8096 32 1B 82             LD      (CurrentBank),A
+124   8096 32 1C 82             LD      (CurrentBank),A
 125   8099
 126   8099              FillBankLoop:
-127   8099 3A 1B 82             LD      A,(CurrentBank)
+127   8099 3A 1C 82             LD      A,(CurrentBank)
 128   809C 01 DF 03             LD      BC,$03DF
 129   809F ED 79                OUT     (C),A
 130   80A1
 131   80A1 21 00 C0             LD      HL,$C000
-132   80A4 11 75 82             LD      DE,ColorPattern
-133   80A7 3A 1B 82             LD      A,(CurrentBank)
+132   80A4 11 76 82             LD      DE,ColorPattern
+133   80A7 3A 1C 82             LD      A,(CurrentBank)
 134   80AA FE 25                CP      37
 135   80AC 28 05                JR      Z,FillLastHalfBank
 136   80AE 01 00 40             LD      BC,$4000
@@ -152,9 +152,9 @@
 151   80BC FE 82                CP      HIGH ColorPatternEnd
 152   80BE 20 08                JR      NZ,PatternPointerReady
 153   80C0 7B                   LD      A,E
-154   80C1 FE F5                CP      LOW ColorPatternEnd
+154   80C1 FE F6                CP      LOW ColorPatternEnd
 155   80C3 20 03                JR      NZ,PatternPointerReady
-156   80C5 11 75 82             LD      DE,ColorPattern
+156   80C5 11 76 82             LD      DE,ColorPattern
 157   80C8              PatternPointerReady:
 158   80C8 F1                   POP     AF
 159   80C9
@@ -163,9 +163,9 @@
 162   80CB B1                   OR      C
 163   80CC 20 E8                JR      NZ,FillBankBytes
 164   80CE
-165   80CE 3A 1B 82             LD      A,(CurrentBank)
+165   80CE 3A 1C 82             LD      A,(CurrentBank)
 166   80D1 3C                   INC     A
-167   80D2 32 1B 82             LD      (CurrentBank),A
+167   80D2 32 1C 82             LD      (CurrentBank),A
 168   80D5 FE 26                CP      38
 169   80D7 20 C0                JR      NZ,FillBankLoop
 170   80D9 C9                   RET
@@ -225,334 +225,333 @@
 224   810D              ; briefly so the VGA window can be inspected before advancing.
 225   810D              ; -------------------------------------------------------------------------
 226   810D              RunPackedModeSweep:
-227   810D 21 C7 83             LD      HL,MsgSweepStart
-228   8110 CD 13 82             CALL    DebugPrint
-229   8113 21 34 82             LD      HL,PackedModeTable
-230   8116 22 1C 82             LD      (ModeTablePtr),HL
+227   810D 21 C8 83             LD      HL,MsgSweepStart
+228   8110 CD 14 82             CALL    DebugPrint
+229   8113 21 35 82             LD      HL,PackedModeTable
+230   8116 22 1D 82             LD      (ModeTablePtr),HL
 231   8119 3E 0D                LD      A,13
-232   811B 32 1E 82             LD      (ModeCount),A
+232   811B 32 1F 82             LD      (ModeCount),A
 233   811E
 234   811E              PackedModeNext:
-235   811E 2A 1C 82             LD      HL,(ModeTablePtr)
+235   811E 2A 1D 82             LD      HL,(ModeTablePtr)
 236   8121 7E                   LD      A,(HL)
 237   8122 23                   INC     HL
-238   8123 32 1F 82             LD      (ModeXLo),A
+238   8123 32 20 82             LD      (ModeXLo),A
 239   8126 7E                   LD      A,(HL)
 240   8127 23                   INC     HL
-241   8128 32 20 82             LD      (ModeXHi),A
+241   8128 32 21 82             LD      (ModeXHi),A
 242   812B 7E                   LD      A,(HL)
 243   812C 23                   INC     HL
-244   812D 32 21 82             LD      (ModeYLo),A
+244   812D 32 22 82             LD      (ModeYLo),A
 245   8130 7E                   LD      A,(HL)
 246   8131 23                   INC     HL
-247   8132 32 22 82             LD      (ModeYHi),A
+247   8132 32 23 82             LD      (ModeYHi),A
 248   8135 7E                   LD      A,(HL)
 249   8136 23                   INC     HL
-250   8137 32 23 82             LD      (ModeBpp),A
-251   813A 22 1C 82             LD      (ModeTablePtr),HL
+250   8137 32 24 82             LD      (ModeBpp),A
+251   813A 22 1D 82             LD      (ModeTablePtr),HL
 252   813D
 253   813D 3E 00                LD      A,0
-254   813F 3A 1F 82             LD      A,(ModeXLo)
+254   813F 3A 20 82             LD      A,(ModeXLo)
 255   8142 5F                   LD      E,A
 256   8143 CD 8B 80             CALL    WriteVgaRegister
 257   8146 3E 01                LD      A,1
-258   8148 3A 20 82             LD      A,(ModeXHi)
+258   8148 3A 21 82             LD      A,(ModeXHi)
 259   814B 5F                   LD      E,A
 260   814C CD 8B 80             CALL    WriteVgaRegister
 261   814F 3E 02                LD      A,2
-262   8151 3A 21 82             LD      A,(ModeYLo)
+262   8151 3A 22 82             LD      A,(ModeYLo)
 263   8154 5F                   LD      E,A
 264   8155 CD 8B 80             CALL    WriteVgaRegister
 265   8158 3E 03                LD      A,3
-266   815A 3A 22 82             LD      A,(ModeYHi)
+266   815A 3A 23 82             LD      A,(ModeYHi)
 267   815D 5F                   LD      E,A
 268   815E CD 8B 80             CALL    WriteVgaRegister
 269   8161 3E 04                LD      A,4
-270   8163 3A 23 82             LD      A,(ModeBpp)
+270   8163 3A 24 82             LD      A,(ModeBpp)
 271   8166 5F                   LD      E,A
 272   8167 CD 8B 80             CALL    WriteVgaRegister
 273   816A 3E 05                LD      A,5
 274   816C 1E 01                LD      E,1
 275   816E CD 8B 80             CALL    WriteVgaRegister
 276   8171
-277   8171 21 E6 83             LD      HL,MsgModePrefix
-278   8174 CD 13 82             CALL    DebugPrint
-279   8177 3A 20 82             LD      A,(ModeXHi)
-280   817A CD F9 81             CALL    DebugHexByte
-281   817D 3A 1F 82             LD      A,(ModeXLo)
-282   8180 CD F9 81             CALL    DebugHexByte
+277   8171 21 E7 83             LD      HL,MsgModePrefix
+278   8174 CD 14 82             CALL    DebugPrint
+279   8177 3A 21 82             LD      A,(ModeXHi)
+280   817A CD FA 81             CALL    DebugHexByte
+281   817D 3A 20 82             LD      A,(ModeXLo)
+282   8180 CD FA 81             CALL    DebugHexByte
 283   8183 3E 78                LD      A,'x'
 284   8185 D3 EF                OUT     ($EF),A
-285   8187 3A 22 82             LD      A,(ModeYHi)
-286   818A CD F9 81             CALL    DebugHexByte
-287   818D 3A 21 82             LD      A,(ModeYLo)
-288   8190 CD F9 81             CALL    DebugHexByte
+285   8187 3A 23 82             LD      A,(ModeYHi)
+286   818A CD FA 81             CALL    DebugHexByte
+287   818D 3A 22 82             LD      A,(ModeYLo)
+288   8190 CD FA 81             CALL    DebugHexByte
 289   8193 3E 20                LD      A,' '
 290   8195 D3 EF                OUT     ($EF),A
-291   8197 3A 23 82             LD      A,(ModeBpp)
-292   819A CD F9 81             CALL    DebugHexByte
-293   819D 21 EC 83             LD      HL,MsgBppSuffix
-294   81A0 CD 13 82             CALL    DebugPrint
+291   8197 3A 24 82             LD      A,(ModeBpp)
+292   819A CD FA 81             CALL    DebugHexByte
+293   819D 21 ED 83             LD      HL,MsgBppSuffix
+294   81A0 CD 14 82             CALL    DebugPrint
 295   81A3
-296   81A3 CD B9 81             CALL    FillModeVRAM
-297   81A6 CD F0 81             CALL    ModeHoldDelay
+296   81A3 CD BA 81             CALL    FillModeVRAM
+297   81A6 CD F1 81             CALL    ModeHoldDelay
 298   81A9
-299   81A9 3A 1E 82             LD      A,(ModeCount)
+299   81A9 3A 1F 82             LD      A,(ModeCount)
 300   81AC 3D                   DEC     A
-301   81AD 32 1E 82             LD      (ModeCount),A
-vga_test.asm(302): error: [JR] Target out of range (-148)
-302   81B0 20 00                JR      NZ,PackedModeNext
-303   81B2 21 FF 83             LD      HL,MsgSweepDone
-304   81B5 CD 13 82             CALL    DebugPrint
-305   81B8 C9                   RET
-306   81B9
-307   81B9              ; Fill 1 MiB with a repeating RGB/index-friendly byte pattern.
-308   81B9              ; All 64 banks are written so the test covers the full VRAM aperture.
-309   81B9              FillModeVRAM:
-310   81B9 AF                   XOR     A
-311   81BA 32 1B 82             LD      (CurrentBank),A
-312   81BD              ModeFillBank:
-313   81BD 3A 1B 82             LD      A,(CurrentBank)
-314   81C0 01 DF 03             LD      BC,$03DF
-315   81C3 ED 79                OUT     (C),A
-316   81C5 21 00 C0             LD      HL,$C000
-317   81C8 11 24 82             LD      DE,ModePattern
-318   81CB 01 00 40             LD      BC,$4000
-319   81CE              ModeFillByte:
-320   81CE 1A                   LD      A,(DE)
-321   81CF 13                   INC     DE
-322   81D0 77                   LD      (HL),A
-323   81D1 23                   INC     HL
-324   81D2 7A                   LD      A,D
-325   81D3 FE 82                CP      HIGH ModePatternEnd
-326   81D5 20 08                JR      NZ,ModePatternReady
-327   81D7 7B                   LD      A,E
-328   81D8 FE 34                CP      LOW ModePatternEnd
-329   81DA 20 03                JR      NZ,ModePatternReady
-330   81DC 11 24 82             LD      DE,ModePattern
-331   81DF              ModePatternReady:
-332   81DF 0B                   DEC     BC
-333   81E0 78                   LD      A,B
-334   81E1 B1                   OR      C
-335   81E2 20 EA                JR      NZ,ModeFillByte
-336   81E4 3A 1B 82             LD      A,(CurrentBank)
-337   81E7 3C                   INC     A
-338   81E8 32 1B 82             LD      (CurrentBank),A
-339   81EB FE 40                CP      64
-340   81ED 20 CE                JR      NZ,ModeFillBank
-341   81EF C9                   RET
-342   81F0
-343   81F0              ModeHoldDelay:
-344   81F0 11 FF FF             LD      DE,$FFFF
-345   81F3              ModeHoldLoop:
-346   81F3 1B                   DEC     DE
-347   81F4 7A                   LD      A,D
-348   81F5 B3                   OR      E
-349   81F6 20 FB                JR      NZ,ModeHoldLoop
-350   81F8 C9                   RET
-351   81F9
-352   81F9              DebugHexByte:
-353   81F9 F5                   PUSH    AF
-354   81FA 0F                   RRCA
-355   81FB 0F                   RRCA
-356   81FC 0F                   RRCA
-357   81FD 0F                   RRCA
-358   81FE CD 06 82             CALL    DebugHexNibble
-359   8201 F1                   POP     AF
-360   8202 CD 06 82             CALL    DebugHexNibble
-361   8205 C9                   RET
-362   8206              DebugHexNibble:
-363   8206 E6 0F                AND     $0F
-364   8208 C6 30                ADD     A,'0'
-365   820A FE 3A                CP      '9'+1
-366   820C 38 02                JR      C,DebugHexOut
-367   820E C6 07                ADD     A,7
-368   8210              DebugHexOut:
-369   8210 D3 EF                OUT     ($EF),A
-370   8212 C9                   RET
-371   8213
-372   8213              ; -------------------------------------------------------------------------
-373   8213              ; Port EF text logger (ASCII bytes, same convention as Project112).
-374   8213              ; -------------------------------------------------------------------------
-375   8213              DebugPrint:
-376   8213 7E                   LD      A,(HL)
-377   8214 B7                   OR      A
-378   8215 C8                   RET     Z
-379   8216 D3 EF                OUT     ($EF),A
-380   8218 23                   INC     HL
-381   8219 18 F8                JR      DebugPrint
-382   821B
-383   821B 00           CurrentBank: DB 0
-384   821C
-385   821C
-386   821C 00 00        ModeTablePtr: DW 0
-387   821E 00           ModeCount:    DB 0
-388   821F 00           ModeXLo:      DB 0
-389   8220 00           ModeXHi:      DB 0
-390   8221 00           ModeYLo:      DB 0
-391   8222 00           ModeYHi:      DB 0
-392   8223 00           ModeBpp:      DB 0
-393   8224
-394   8224              ModePattern:
-395   8224 00 00 1F 00          DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
-395   8228 E0 07 FF 07
-395   822C 00 F8 1F F8
-395   8230 E0 FF FF FF
-396   8234              ModePatternEnd:
-397   8234
-398   8234              ; All and only the packed modes that fit in the adapter's 1 MiB VRAM.
-399   8234              ; Entry: X low, X high, Y low, Y high, bits per pixel.
-400   8234              PackedModeTable:
-401   8234 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,8
-401   8238 08
-402   8239 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,15
-402   823D 0F
-403   823E 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,16
-403   8242 10
-404   8243 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,24
-404   8247 18
-405   8248 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,32
-405   824C 20
-406   824D 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,8
-406   8251 08
-407   8252 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,15
-407   8256 0F
-408   8257 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,16
-408   825B 10
-409   825C 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,24
-409   8260 18
-410   8261 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,8
-410   8265 08
-411   8266 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,15
-411   826A 0F
-412   826B 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,16
-412   826F 10
-413   8270 00 04 00 03          DB 1024&255,1024>>8,768&255,768>>8,8
-413   8274 08
-414   8275
-415   8275              ColorPattern:
-416   8275                      ; Eight RGB565 colours, each repeated for eight adjacent pixels.
-417   8275                      ; This makes eight visible bars, repeated across the 640-pixel row.
-418   8275 00 00 00 00          DB $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
-418   8279 00 00 00 00
-418   827D 00 00 00 00
-418   8281 00 00 00 00
-419   8285 1F 00 1F 00          DB $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00
-419   8289 1F 00 1F 00
-419   828D 1F 00 1F 00
-419   8291 1F 00 1F 00
-420   8295 E0 07 E0 07          DB $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07
-420   8299 E0 07 E0 07
-420   829D E0 07 E0 07
-420   82A1 E0 07 E0 07
-421   82A5 FF 07 FF 07          DB $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07
-421   82A9 FF 07 FF 07
-421   82AD FF 07 FF 07
-421   82B1 FF 07 FF 07
-422   82B5 00 F8 00 F8          DB $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8
-422   82B9 00 F8 00 F8
-422   82BD 00 F8 00 F8
-422   82C1 00 F8 00 F8
-423   82C5 1F F8 1F F8          DB $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8
-423   82C9 1F F8 1F F8
-423   82CD 1F F8 1F F8
-423   82D1 1F F8 1F F8
-424   82D5 E0 FF E0 FF          DB $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF
-424   82D9 E0 FF E0 FF
-424   82DD E0 FF E0 FF
-424   82E1 E0 FF E0 FF
-425   82E5 FF FF FF FF          DB $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF
-425   82E9 FF FF FF FF
-425   82ED FF FF FF FF
-425   82F1 FF FF FF FF
-426   82F5              ColorPatternEnd:
-427   82F5
-428   82F5 50 31 33 32  MsgBuild:        DEFM "P132 VGA TEST ATM710",13,10,0
-428   82F9 20 56 47 41
-428   82FD 20 54 45 53
-428   8301 54 20 41 54
-428   8305 4D 37 31 30
-428   8309 0D 0A 00
-429   830C 41 54 4D 20  MsgStart:        DEFM "ATM VGA ADAPTER TEST START",13,10,0
-429   8310 56 47 41 20
-429   8314 41 44 41 50
-429   8318 54 45 52 20
-429   831C 54 45 53 54
-429   8320 20 53 54 41
-429   8324 52 54 0D 0A
-429   8328 00
-430   8329 56 47 41 20  MsgAdapterInit:  DEFM "VGA SOFTWARE MODE ON",13,10,0
-430   832D 53 4F 46 54
-430   8331 57 41 52 45
-430   8335 20 4D 4F 44
-430   8339 45 20 4F 4E
-430   833D 0D 0A 00
-431   8340 4D 4F 44 45  MsgModeSet:      DEFM "MODE 640X480 RGB565 SET",13,10,0
-431   8344 20 36 34 30
-431   8348 58 34 38 30
-431   834C 20 52 47 42
-431   8350 35 36 35 20
-431   8354 53 45 54 0D
-431   8358 0A 00
-432   835A 56 52 41 4D  MsgFrameWritten: DEFM "VRAM 614400 BYTES WRITTEN",13,10,0
-432   835E 20 36 31 34
-432   8362 34 30 30 20
-432   8366 42 59 54 45
-432   836A 53 20 57 52
-432   836E 49 54 54 45
-432   8372 4E 0D 0A 00
-433   8376 56 52 41 4D  MsgReadbackPass: DEFM "VRAM READBACK PASS",13,10,0
-433   837A 20 52 45 41
-433   837E 44 42 41 43
-433   8382 4B 20 50 41
-433   8386 53 53 0D 0A
-433   838A 00
-434   838B 56 52 41 4D  MsgReadbackFail: DEFM "VRAM READBACK FAIL",13,10,0
-434   838F 20 52 45 41
-434   8393 44 42 41 43
-434   8397 4B 20 46 41
-434   839B 49 4C 0D 0A
-434   839F 00
-435   83A0 56 47 41 20  MsgReady:        DEFM "VGA TEST COMPLETE - CHECK VGA WINDOW",13,10,0
-435   83A4 54 45 53 54
-435   83A8 20 43 4F 4D
-435   83AC 50 4C 45 54
-435   83B0 45 20 2D 20
-435   83B4 43 48 45 43
-435   83B8 4B 20 56 47
-435   83BC 41 20 57 49
-435   83C0 4E 44 4F 57
-435   83C4 0D 0A 00
-436   83C7 50 41 43 4B  MsgSweepStart:   DEFM "PACKED SVGA MODE SWEEP START",13,10,0
-436   83CB 45 44 20 53
-436   83CF 56 47 41 20
-436   83D3 4D 4F 44 45
-436   83D7 20 53 57 45
-436   83DB 45 50 20 53
-436   83DF 54 41 52 54
-436   83E3 0D 0A 00
-437   83E6 4D 4F 44 45  MsgModePrefix:   DEFM "MODE ",0
-437   83EA 20 00
-438   83EC 20 42 50 50  MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
-438   83F0 20 2D 20 56
-438   83F4 52 41 4D 20
-438   83F8 54 45 53 54
-438   83FC 0D 0A 00
-439   83FF 50 41 43 4B  MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
-439   8403 45 44 20 53
-439   8407 56 47 41 20
-439   840B 4D 4F 44 45
-439   840F 20 53 57 45
-439   8413 45 50 20 44
-439   8417 4F 4E 45 0D
-439   841B 0A 00
-440   841D
-441   841D              ProgramEnd:
-442   841D
-443   841D              ; =========================================================================
-444   841D              ; TR-DOS BASIC loader. Loads VGATEST.C at 8000h and starts it.
-445   841D              ; =========================================================================
-446   841D                      ORG     $B000
+301   81AD 32 1F 82             LD      (ModeCount),A
+302   81B0 C2 1E 81             JP      NZ,PackedModeNext
+303   81B3 21 00 84             LD      HL,MsgSweepDone
+304   81B6 CD 14 82             CALL    DebugPrint
+305   81B9 C9                   RET
+306   81BA
+307   81BA              ; Fill 1 MiB with a repeating RGB/index-friendly byte pattern.
+308   81BA              ; All 64 banks are written so the test covers the full VRAM aperture.
+309   81BA              FillModeVRAM:
+310   81BA AF                   XOR     A
+311   81BB 32 1C 82             LD      (CurrentBank),A
+312   81BE              ModeFillBank:
+313   81BE 3A 1C 82             LD      A,(CurrentBank)
+314   81C1 01 DF 03             LD      BC,$03DF
+315   81C4 ED 79                OUT     (C),A
+316   81C6 21 00 C0             LD      HL,$C000
+317   81C9 11 25 82             LD      DE,ModePattern
+318   81CC 01 00 40             LD      BC,$4000
+319   81CF              ModeFillByte:
+320   81CF 1A                   LD      A,(DE)
+321   81D0 13                   INC     DE
+322   81D1 77                   LD      (HL),A
+323   81D2 23                   INC     HL
+324   81D3 7A                   LD      A,D
+325   81D4 FE 82                CP      HIGH ModePatternEnd
+326   81D6 20 08                JR      NZ,ModePatternReady
+327   81D8 7B                   LD      A,E
+328   81D9 FE 35                CP      LOW ModePatternEnd
+329   81DB 20 03                JR      NZ,ModePatternReady
+330   81DD 11 25 82             LD      DE,ModePattern
+331   81E0              ModePatternReady:
+332   81E0 0B                   DEC     BC
+333   81E1 78                   LD      A,B
+334   81E2 B1                   OR      C
+335   81E3 20 EA                JR      NZ,ModeFillByte
+336   81E5 3A 1C 82             LD      A,(CurrentBank)
+337   81E8 3C                   INC     A
+338   81E9 32 1C 82             LD      (CurrentBank),A
+339   81EC FE 40                CP      64
+340   81EE 20 CE                JR      NZ,ModeFillBank
+341   81F0 C9                   RET
+342   81F1
+343   81F1              ModeHoldDelay:
+344   81F1 11 FF FF             LD      DE,$FFFF
+345   81F4              ModeHoldLoop:
+346   81F4 1B                   DEC     DE
+347   81F5 7A                   LD      A,D
+348   81F6 B3                   OR      E
+349   81F7 20 FB                JR      NZ,ModeHoldLoop
+350   81F9 C9                   RET
+351   81FA
+352   81FA              DebugHexByte:
+353   81FA F5                   PUSH    AF
+354   81FB 0F                   RRCA
+355   81FC 0F                   RRCA
+356   81FD 0F                   RRCA
+357   81FE 0F                   RRCA
+358   81FF CD 07 82             CALL    DebugHexNibble
+359   8202 F1                   POP     AF
+360   8203 CD 07 82             CALL    DebugHexNibble
+361   8206 C9                   RET
+362   8207              DebugHexNibble:
+363   8207 E6 0F                AND     $0F
+364   8209 C6 30                ADD     A,'0'
+365   820B FE 3A                CP      '9'+1
+366   820D 38 02                JR      C,DebugHexOut
+367   820F C6 07                ADD     A,7
+368   8211              DebugHexOut:
+369   8211 D3 EF                OUT     ($EF),A
+370   8213 C9                   RET
+371   8214
+372   8214              ; -------------------------------------------------------------------------
+373   8214              ; Port EF text logger (ASCII bytes, same convention as Project112).
+374   8214              ; -------------------------------------------------------------------------
+375   8214              DebugPrint:
+376   8214 7E                   LD      A,(HL)
+377   8215 B7                   OR      A
+378   8216 C8                   RET     Z
+379   8217 D3 EF                OUT     ($EF),A
+380   8219 23                   INC     HL
+381   821A 18 F8                JR      DebugPrint
+382   821C
+383   821C 00           CurrentBank: DB 0
+384   821D
+385   821D
+386   821D 00 00        ModeTablePtr: DW 0
+387   821F 00           ModeCount:    DB 0
+388   8220 00           ModeXLo:      DB 0
+389   8221 00           ModeXHi:      DB 0
+390   8222 00           ModeYLo:      DB 0
+391   8223 00           ModeYHi:      DB 0
+392   8224 00           ModeBpp:      DB 0
+393   8225
+394   8225              ModePattern:
+395   8225 00 00 1F 00          DB $00,$00,$1F,$00,$E0,$07,$FF,$07,$00,$F8,$1F,$F8,$E0,$FF,$FF,$FF
+395   8229 E0 07 FF 07
+395   822D 00 F8 1F F8
+395   8231 E0 FF FF FF
+396   8235              ModePatternEnd:
+397   8235
+398   8235              ; All and only the packed modes that fit in the adapter's 1 MiB VRAM.
+399   8235              ; Entry: X low, X high, Y low, Y high, bits per pixel.
+400   8235              PackedModeTable:
+401   8235 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,8
+401   8239 08
+402   823A 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,15
+402   823E 0F
+403   823F 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,16
+403   8243 10
+404   8244 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,24
+404   8248 18
+405   8249 40 01 C8 00          DB 320&255,320>>8,200&255,200>>8,32
+405   824D 20
+406   824E 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,8
+406   8252 08
+407   8253 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,15
+407   8257 0F
+408   8258 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,16
+408   825C 10
+409   825D 80 02 E0 01          DB 640&255,640>>8,480&255,480>>8,24
+409   8261 18
+410   8262 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,8
+410   8266 08
+411   8267 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,15
+411   826B 0F
+412   826C 20 03 58 02          DB 800&255,800>>8,600&255,600>>8,16
+412   8270 10
+413   8271 00 04 00 03          DB 1024&255,1024>>8,768&255,768>>8,8
+413   8275 08
+414   8276
+415   8276              ColorPattern:
+416   8276                      ; Eight RGB565 colours, each repeated for eight adjacent pixels.
+417   8276                      ; This makes eight visible bars, repeated across the 640-pixel row.
+418   8276 00 00 00 00          DB $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
+418   827A 00 00 00 00
+418   827E 00 00 00 00
+418   8282 00 00 00 00
+419   8286 1F 00 1F 00          DB $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00, $1F,$00
+419   828A 1F 00 1F 00
+419   828E 1F 00 1F 00
+419   8292 1F 00 1F 00
+420   8296 E0 07 E0 07          DB $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07, $E0,$07
+420   829A E0 07 E0 07
+420   829E E0 07 E0 07
+420   82A2 E0 07 E0 07
+421   82A6 FF 07 FF 07          DB $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07, $FF,$07
+421   82AA FF 07 FF 07
+421   82AE FF 07 FF 07
+421   82B2 FF 07 FF 07
+422   82B6 00 F8 00 F8          DB $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8, $00,$F8
+422   82BA 00 F8 00 F8
+422   82BE 00 F8 00 F8
+422   82C2 00 F8 00 F8
+423   82C6 1F F8 1F F8          DB $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8, $1F,$F8
+423   82CA 1F F8 1F F8
+423   82CE 1F F8 1F F8
+423   82D2 1F F8 1F F8
+424   82D6 E0 FF E0 FF          DB $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF, $E0,$FF
+424   82DA E0 FF E0 FF
+424   82DE E0 FF E0 FF
+424   82E2 E0 FF E0 FF
+425   82E6 FF FF FF FF          DB $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF, $FF,$FF
+425   82EA FF FF FF FF
+425   82EE FF FF FF FF
+425   82F2 FF FF FF FF
+426   82F6              ColorPatternEnd:
+427   82F6
+428   82F6 50 31 33 32  MsgBuild:        DEFM "P132 VGA TEST ATM710",13,10,0
+428   82FA 20 56 47 41
+428   82FE 20 54 45 53
+428   8302 54 20 41 54
+428   8306 4D 37 31 30
+428   830A 0D 0A 00
+429   830D 41 54 4D 20  MsgStart:        DEFM "ATM VGA ADAPTER TEST START",13,10,0
+429   8311 56 47 41 20
+429   8315 41 44 41 50
+429   8319 54 45 52 20
+429   831D 54 45 53 54
+429   8321 20 53 54 41
+429   8325 52 54 0D 0A
+429   8329 00
+430   832A 56 47 41 20  MsgAdapterInit:  DEFM "VGA SOFTWARE MODE ON",13,10,0
+430   832E 53 4F 46 54
+430   8332 57 41 52 45
+430   8336 20 4D 4F 44
+430   833A 45 20 4F 4E
+430   833E 0D 0A 00
+431   8341 4D 4F 44 45  MsgModeSet:      DEFM "MODE 640X480 RGB565 SET",13,10,0
+431   8345 20 36 34 30
+431   8349 58 34 38 30
+431   834D 20 52 47 42
+431   8351 35 36 35 20
+431   8355 53 45 54 0D
+431   8359 0A 00
+432   835B 56 52 41 4D  MsgFrameWritten: DEFM "VRAM 614400 BYTES WRITTEN",13,10,0
+432   835F 20 36 31 34
+432   8363 34 30 30 20
+432   8367 42 59 54 45
+432   836B 53 20 57 52
+432   836F 49 54 54 45
+432   8373 4E 0D 0A 00
+433   8377 56 52 41 4D  MsgReadbackPass: DEFM "VRAM READBACK PASS",13,10,0
+433   837B 20 52 45 41
+433   837F 44 42 41 43
+433   8383 4B 20 50 41
+433   8387 53 53 0D 0A
+433   838B 00
+434   838C 56 52 41 4D  MsgReadbackFail: DEFM "VRAM READBACK FAIL",13,10,0
+434   8390 20 52 45 41
+434   8394 44 42 41 43
+434   8398 4B 20 46 41
+434   839C 49 4C 0D 0A
+434   83A0 00
+435   83A1 56 47 41 20  MsgReady:        DEFM "VGA TEST COMPLETE - CHECK VGA WINDOW",13,10,0
+435   83A5 54 45 53 54
+435   83A9 20 43 4F 4D
+435   83AD 50 4C 45 54
+435   83B1 45 20 2D 20
+435   83B5 43 48 45 43
+435   83B9 4B 20 56 47
+435   83BD 41 20 57 49
+435   83C1 4E 44 4F 57
+435   83C5 0D 0A 00
+436   83C8 50 41 43 4B  MsgSweepStart:   DEFM "PACKED SVGA MODE SWEEP START",13,10,0
+436   83CC 45 44 20 53
+436   83D0 56 47 41 20
+436   83D4 4D 4F 44 45
+436   83D8 20 53 57 45
+436   83DC 45 50 20 53
+436   83E0 54 41 52 54
+436   83E4 0D 0A 00
+437   83E7 4D 4F 44 45  MsgModePrefix:   DEFM "MODE ",0
+437   83EB 20 00
+438   83ED 20 42 50 50  MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
+438   83F1 20 2D 20 56
+438   83F5 52 41 4D 20
+438   83F9 54 45 53 54
+438   83FD 0D 0A 00
+439   8400 50 41 43 4B  MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
+439   8404 45 44 20 53
+439   8408 56 47 41 20
+439   840C 4D 4F 44 45
+439   8410 20 53 57 45
+439   8414 45 50 20 44
+439   8418 4F 4E 45 0D
+439   841C 0A 00
+440   841E
+441   841E              ProgramEnd:
+442   841E
+443   841E              ; =========================================================================
+444   841E              ; TR-DOS BASIC loader. Loads VGATEST.C at 8000h and starts it.
+445   841E              ; =========================================================================
+446   841E                      ORG     $B000
 447   B000              CLEAR       EQU $FD
 448   B000              LOAD        EQU $EF
 449   B000              CODE        EQU $AF
