@@ -228,8 +228,12 @@ RunPackedModeSweep:
         CALL    DebugPrint
         LD      HL,PackedModeTable
         LD      (ModeTablePtr),HL
+        LD      HL,ModeLabelTable
+        LD      (ModeLabelPtr),HL
         LD      A,13
         LD      (ModeCount),A
+        LD      A,1
+        LD      (ModeIndex),A
 
 PackedModeNext:
         LD      HL,(ModeTablePtr)
@@ -294,9 +298,14 @@ PackedModeNext:
         CALL    DebugPrint
 
         CALL    FillModeVRAM
-        ; Draw the standard Spectrum ROM 8x8 font into the packed framebuffer.
-        CALL    DrawSpectrumBanner
-        CALL    ModeHoldDelay
+
+        ; Show the exact active test on the Spectrum screen and wait for SPACE.
+        CALL    SpectrumShowMode
+        CALL    WaitSpace
+
+        LD      A,(ModeIndex)
+        INC     A
+        LD      (ModeIndex),A
 
         LD      A,(ModeCount)
         DEC     A
@@ -516,6 +525,51 @@ DebugHexOut:
 ; -------------------------------------------------------------------------
 ; Port EF text logger (ASCII bytes, same convention as Project112).
 ; -------------------------------------------------------------------------
+; -------------------------------------------------------------------------
+; Spectrum display and keyboard control.
+; RST 10h is the Spectrum ROM PRINT-OUT entry (current channel #2).
+; SPACE is bit 0 of keyboard row 7FFE, active low.
+; -------------------------------------------------------------------------
+SpectrumPrint:
+        LD      A,(HL)
+        OR      A
+        RET     Z
+        RST     $10
+        INC     HL
+        JR      SpectrumPrint
+
+SpectrumClear:
+        CALL    $0D6B             ; Spectrum ROM CLS
+        RET
+
+SpectrumShowMode:
+        CALL    SpectrumClear
+        LD      HL,ScreenTitle
+        CALL    SpectrumPrint
+        LD      HL,ScreenModeHeading
+        CALL    SpectrumPrint
+        LD      HL,(ModeLabelPtr)
+        CALL    SpectrumPrint
+        LD      HL,ScreenTestRunning
+        CALL    SpectrumPrint
+        LD      HL,ScreenWritePassed
+        CALL    SpectrumPrint
+        LD      HL,ScreenNextHint
+        CALL    SpectrumPrint
+        RET
+
+WaitSpace:
+        LD      BC,$7FFE
+WaitSpacePress:
+        IN      A,(C)
+        AND     1
+        JR      NZ,WaitSpacePress
+WaitSpaceRelease:
+        IN      A,(C)
+        AND     1
+        JR      Z,WaitSpaceRelease
+        RET
+
 DebugPrint:
         LD      A,(HL)
         OR      A
@@ -528,6 +582,8 @@ CurrentBank: DB 0
 
 
 ModeTablePtr: DW 0
+ModeLabelPtr: DW 0
+ModeIndex:    DB 0
 ModeCount:    DB 0
 ModeXLo:      DB 0
 ModeXHi:      DB 0
@@ -565,6 +621,24 @@ PackedModeTable:
         DB 800&255,800>>8,600&255,600>>8,16
         DB 1024&255,1024>>8,768&255,768>>8,8
 
+ModeLabelTable:
+        DW ModeLabel01,ModeLabel02,ModeLabel03,ModeLabel04,ModeLabel05
+        DW ModeLabel06,ModeLabel07,ModeLabel08,ModeLabel09
+        DW ModeLabel10,ModeLabel11,ModeLabel12,ModeLabel13
+ModeLabel01: DEFM "01/13  320x200  8 BPP",13,13,0
+ModeLabel02: DEFM "02/13  320x200  15 BPP",13,13,0
+ModeLabel03: DEFM "03/13  320x200  16 BPP",13,13,0
+ModeLabel04: DEFM "04/13  320x200  24 BPP",13,13,0
+ModeLabel05: DEFM "05/13  320x200  32 BPP",13,13,0
+ModeLabel06: DEFM "06/13  640x480  8 BPP",13,13,0
+ModeLabel07: DEFM "07/13  640x480  15 BPP",13,13,0
+ModeLabel08: DEFM "08/13  640x480  16 BPP",13,13,0
+ModeLabel09: DEFM "09/13  640x480  24 BPP",13,13,0
+ModeLabel10: DEFM "10/13  800x600  8 BPP",13,13,0
+ModeLabel11: DEFM "11/13  800x600  15 BPP",13,13,0
+ModeLabel12: DEFM "12/13  800x600  16 BPP",13,13,0
+ModeLabel13: DEFM "13/13  1024x768  8 BPP",13,13,0
+
 ColorPattern:
         ; Eight RGB565 colours, each repeated for eight adjacent pixels.
         ; This makes eight visible bars, repeated across the 640-pixel row.
@@ -590,6 +664,12 @@ MsgSweepStart:   DEFM "PACKED SVGA MODE SWEEP START",13,10,0
 MsgModePrefix:   DEFM "MODE ",0
 MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
 MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
+
+ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
+ScreenModeHeading: DEFM "CURRENT VGA MODE:",13,0
+ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VRAM",13,0
+ScreenWritePassed: DEFM "RESULT: VRAM WRITE COMPLETE",13,13,0
+ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
 
 ProgramEnd:
 
