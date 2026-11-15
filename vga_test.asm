@@ -91,6 +91,7 @@ VgaTestEntry:
         CALL    DebugPrint
 
         CALL    RunPackedModeSweep
+        CALL    Run2DTests
 
         LD      HL,MsgReady
         CALL    DebugPrint
@@ -110,6 +111,233 @@ VgaTestFailedIdle:
 ; ATM Turbo 2+ shadow-port unlock, copied from the working Project112 flow.
 ; TR-DOS ROM entry #3D2F calls OUT (C),A at #2A53.
 ; -------------------------------------------------------------------------
+
+; -------------------------------------------------------------------------
+; 2D engine self-test: solid fill, BitBLT, Bresenham line and cursor.
+; -------------------------------------------------------------------------
+Run2DTests:
+        LD      HL,Msg2DStart
+        CALL    DebugPrint
+        LD      HL,Screen2DRunning
+        CALL    SpectrumShowStatus
+        ; Select 320x200x8.
+        LD      A,0
+        LD      E,64
+        CALL    WriteVgaRegister
+        LD      A,1
+        LD      E,1
+        CALL    WriteVgaRegister
+        LD      A,2
+        LD      E,200
+        CALL    WriteVgaRegister
+        LD      A,3
+        LD      E,0
+        CALL    WriteVgaRegister
+        LD      A,4
+        LD      E,8
+        CALL    WriteVgaRegister
+        LD      A,5
+        LD      E,1
+        CALL    WriteVgaRegister
+        XOR     A
+        LD      BC,$03DF
+        OUT     (C),A
+
+        ; 32-byte solid cursor bitmap at VRAM 0100h.
+        LD      HL,$C100
+        LD      B,32
+        LD      A,$FF
+TwoDCursorBitmap:
+        LD      (HL),A
+        INC     HL
+        DJNZ    TwoDCursorBitmap
+
+        ; Common 320-byte source and destination pitch.
+        LD      A,$0C
+        LD      E,$40
+        CALL    Write2DRegister
+        LD      A,$0D
+        LD      E,$01
+        CALL    Write2DRegister
+        LD      A,$0E
+        LD      E,$40
+        CALL    Write2DRegister
+        LD      A,$0F
+        LD      E,$01
+        CALL    Write2DRegister
+        LD      A,$02
+        LD      E,0
+        CALL    Write2DRegister
+
+        ; Fill rectangle (10,10), 8x4, colour 5Ah.
+        LD      A,$14
+        LD      E,10
+        CALL    Write2DRegister
+        LD      A,$15
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$16
+        LD      E,10
+        CALL    Write2DRegister
+        LD      A,$17
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$18
+        LD      E,8
+        CALL    Write2DRegister
+        LD      A,$19
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$1A
+        LD      E,4
+        CALL    Write2DRegister
+        LD      A,$1B
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$1C
+        LD      E,$5A
+        CALL    Write2DRegister
+        LD      A,0
+        LD      E,1
+        CALL    Write2DRegister
+        LD      A,1
+        CALL    Read2DRegister
+        CP      1
+        JP      NZ,TwoDTestFailed
+        LD      HL,$CC8A
+        LD      A,(HL)
+        CP      $5A
+        JP      NZ,TwoDTestFailed
+        LD      HL,$D051
+        LD      A,(HL)
+        CP      $5A
+        JP      NZ,TwoDTestFailed
+
+        ; Copy the filled 8x4 rectangle from X=10 to X=30.
+        LD      A,$10
+        LD      E,10
+        CALL    Write2DRegister
+        LD      A,$11
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$14
+        LD      E,30
+        CALL    Write2DRegister
+        LD      A,$15
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,0
+        LD      E,2
+        CALL    Write2DRegister
+        LD      A,1
+        CALL    Read2DRegister
+        CP      1
+        JP      NZ,TwoDTestFailed
+        LD      HL,$CC9E
+        LD      A,(HL)
+        CP      $5A
+        JP      NZ,TwoDTestFailed
+
+        ; Draw diagonal from (20,20) to (25,25), colour A5h.
+        LD      A,$14
+        LD      E,20
+        CALL    Write2DRegister
+        LD      A,$16
+        LD      E,20
+        CALL    Write2DRegister
+        LD      A,$20
+        LD      E,25
+        CALL    Write2DRegister
+        LD      A,$21
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$22
+        LD      E,25
+        CALL    Write2DRegister
+        LD      A,$23
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$1C
+        LD      E,$A5
+        CALL    Write2DRegister
+        LD      A,0
+        LD      E,3
+        CALL    Write2DRegister
+        LD      A,1
+        CALL    Read2DRegister
+        CP      1
+        JP      NZ,TwoDTestFailed
+        LD      HL,$D914
+        LD      A,(HL)
+        CP      $A5
+        JP      NZ,TwoDTestFailed
+
+        ; White 16x16 hardware cursor at (40,40).
+        LD      A,$28
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$29
+        LD      E,1
+        CALL    Write2DRegister
+        LD      A,$2A
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$2B
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$2C
+        LD      E,$FF
+        CALL    Write2DRegister
+        LD      A,$2D
+        LD      E,$FF
+        CALL    Write2DRegister
+        LD      A,$2E
+        LD      E,$FF
+        CALL    Write2DRegister
+        LD      A,$2F
+        LD      E,0
+        CALL    Write2DRegister
+        LD      A,$24
+        LD      E,40
+        CALL    Write2DRegister
+        LD      A,$26
+        LD      E,40
+        CALL    Write2DRegister
+        LD      A,$34
+        LD      E,1
+        CALL    Write2DRegister
+
+        LD      HL,Msg2DPass
+        CALL    DebugPrint
+        LD      HL,Screen2DPass
+        CALL    SpectrumShowStatus
+        RET
+
+TwoDTestFailed:
+        LD      HL,Msg2DFail
+        CALL    DebugPrint
+        LD      HL,Screen2DFail
+        CALL    SpectrumShowStatus
+        JP      VgaTestFailedIdle
+
+; A = 2D register index, E = value.
+Write2DRegister:
+        LD      BC,$03E2
+        OUT     (C),A
+        INC     C
+        LD      A,E
+        OUT     (C),A
+        RET
+
+; A = 2D register index, returns value in A.
+Read2DRegister:
+        LD      BC,$03E2
+        OUT     (C),A
+        INC     C
+        IN      A,(C)
+        RET
+
+
 OpenATMShadowPorts:
         LD      BC,ShadowPortsOpened
         PUSH    BC
@@ -950,6 +1178,9 @@ MsgSweepStart:   DEFM "PACKED SVGA MODE SWEEP START",13,10,0
 MsgModePrefix:   DEFM "MODE ",0
 MsgBppSuffix:    DEFM " BPP - VRAM TEST",13,10,0
 MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
+Msg2DStart:      DEFM "2D ENGINE TEST START",13,10,0
+Msg2DPass:       DEFM "2D FILL/BLIT/LINE/CURSOR PASS",13,10,0
+Msg2DFail:       DEFM "2D ENGINE TEST FAIL",13,10,0
 
 ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
 ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
@@ -961,7 +1192,10 @@ ScreenTestRunning: DEFM "TEST: WRITE MODE FRAMEBUFFER",13,0
 ScreenWriteRunning:DEFM "STATUS: WRITING - PLEASE WAIT",13,13,0
 ScreenWritePassed: DEFM "STATUS: WRITE COMPLETE",13,13,0
 ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
-ScreenAllDone:     DEFM "ALL 13 VGA MODES TESTED",13,13,"RESET TO RUN AGAIN",0
+ScreenAllDone:     DEFM "ALL 13 VGA MODES TESTED",13,13,"2D ENGINE TEST COMPLETE",0
+Screen2DRunning:   DEFM "2D ENGINE SELF TEST",13,"SOLID RECTANGLE",13,"BITBLT COPY",13,"BRESENHAM LINE",13,"HARDWARE CURSOR",13,13,0
+Screen2DPass:      DEFM "2D ENGINE: PASS",13,"FILL / BITBLT / LINE",13,"CURSOR ENABLED",13,13,"CHECK VGA WINDOW",0
+Screen2DFail:      DEFM "2D ENGINE: FAIL",13,"SEE PORT EF LOG",0
 
 ; Exact 768-byte font from Project112/src/font88.bin.
 Font88_132:
