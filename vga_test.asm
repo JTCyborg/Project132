@@ -236,8 +236,8 @@ VerifyFailed:
 ; -------------------------------------------------------------------------
 ; Sweep every packed-pixel mode accepted by the Project131 1 MiB adapter.
 ; Supported combinations are taken from docs/ISA_VGA_Adapter.md.
-; Each mode is selected, the entire 1 MiB aperture is written, then held
-; briefly so the VGA window can be inspected before advancing.
+; Each mode writes only its active framebuffer size. The final bank may
+; be partially used; bytes outside the framebuffer are left untouched.
 ; -------------------------------------------------------------------------
 RunPackedModeSweep:
         LD      HL,MsgSweepStart
@@ -268,6 +268,15 @@ PackedModeNext:
         LD      A,(HL)
         INC     HL
         LD      (ModeBpp),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeBankCount),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeLastBankBytes),A
+        LD      A,(HL)
+        INC     HL
+        LD      (ModeLastBankBytes+1),A
         LD      (ModeTablePtr),HL
 
         LD      A,(ModeXLo)
@@ -313,7 +322,7 @@ PackedModeNext:
         LD      HL,MsgBppSuffix
         CALL    DebugPrint
 
-        ; Show the selected mode BEFORE the long 1 MiB VRAM fill.
+        ; Show the selected mode before writing only its framebuffer.
         CALL    SpectrumShowMode
         CALL    FillModeVRAM
         CALL    SpectrumShowWriteComplete
@@ -337,8 +346,9 @@ PackedModeNext:
         CALL    SpectrumPrint
         RET
 
-; Fill 1 MiB with a repeating RGB/index-friendly byte pattern.
-; All 64 banks are written so the test covers the full VRAM aperture.
+; Fill exactly the active framebuffer size, not the full 1 MiB VRAM.
+; ModeBankCount is the number of aperture banks touched. The last bank
+; uses ModeLastBankBytes; all earlier banks use the full 16 KiB aperture.
 FillModeVRAM:
         XOR     A
         LD      (CurrentBank),A
@@ -348,7 +358,21 @@ ModeFillBank:
         OUT     (C),A
         LD      HL,$C000
         LD      DE,ModePattern
+        LD      A,(CurrentBank)
+        LD      B,A
+        LD      A,(ModeBankCount)
+        DEC     A
+        CP      B
+        JR      NZ,ModeFillFullBank
+        LD      BC,(ModeLastBankBytes)
+        LD      A,B
+        OR      C
+        JR      NZ,ModeFillCountReady
         LD      BC,$4000
+        JR      ModeFillCountReady
+ModeFillFullBank:
+        LD      BC,$4000
+ModeFillCountReady:
 ModeFillByte:
         LD      A,(DE)
         INC     DE
@@ -369,7 +393,9 @@ ModePatternReady:
         LD      A,(CurrentBank)
         INC     A
         LD      (CurrentBank),A
-        CP      64
+        LD      B,A
+        LD      A,(ModeBankCount)
+        CP      B
         JR      NZ,ModeFillBank
         RET
 
@@ -814,6 +840,8 @@ ModeXHi:      DB 0
 ModeYLo:      DB 0
 ModeYHi:      DB 0
 ModeBpp:      DB 0
+ModeBankCount: DB 0
+ModeLastBankBytes: DW 0
 DrawBytes:    DB 0
 DrawRow:      DB 0
 DrawPixelCount: DB 0
@@ -836,38 +864,39 @@ ModePatternEnd:
 ; All and only the packed modes that fit in the adapter's 1 MiB VRAM.
 ; Entry: X low, X high, Y low, Y high, bits per pixel.
 PackedModeTable:
-        DB 320&255,320>>8,200&255,200>>8,8
-        DB 320&255,320>>8,200&255,200>>8,15
-        DB 320&255,320>>8,200&255,200>>8,16
-        DB 320&255,320>>8,200&255,200>>8,24
-        DB 320&255,320>>8,200&255,200>>8,32
-        DB 640&255,640>>8,480&255,480>>8,8
-        DB 640&255,640>>8,480&255,480>>8,15
-        DB 640&255,640>>8,480&255,480>>8,16
-        DB 640&255,640>>8,480&255,480>>8,24
-        DB 800&255,800>>8,600&255,600>>8,8
-        DB 800&255,800>>8,600&255,600>>8,15
-        DB 800&255,800>>8,600&255,600>>8,16
-        DB 1024&255,1024>>8,768&255,768>>8,8
+        ; X,Y,BPP,number-of-banks,last-bank-byte-count (16-bit)
+        DB 320&255,320>>8,200&255,200>>8,8,4,14848&255,14848>>8
+        DB 320&255,320>>8,200&255,200>>8,15,8,13312&255,13312>>8
+        DB 320&255,320>>8,200&255,200>>8,16,8,13312&255,13312>>8
+        DB 320&255,320>>8,200&255,200>>8,24,12,11776&255,11776>>8
+        DB 320&255,320>>8,200&255,200>>8,32,16,10240&255,10240>>8
+        DB 640&255,640>>8,480&255,480>>8,8,19,12288&255,12288>>8
+        DB 640&255,640>>8,480&255,480>>8,15,38,8192&255,8192>>8
+        DB 640&255,640>>8,480&255,480>>8,16,38,8192&255,8192>>8
+        DB 640&255,640>>8,480&255,480>>8,24,57,4096&255,4096>>8
+        DB 800&255,800>>8,600&255,600>>8,8,30,4864&255,4864>>8
+        DB 800&255,800>>8,600&255,600>>8,15,59,9728&255,9728>>8
+        DB 800&255,800>>8,600&255,600>>8,16,59,9728&255,9728>>8
+        DB 1024&255,1024>>8,768&255,768>>8,8,48,16384&255,16384>>8
 
 ModeLabelTable:
         DW ModeLabel01,ModeLabel02,ModeLabel03,ModeLabel04,ModeLabel05
         DW ModeLabel06,ModeLabel07,ModeLabel08,ModeLabel09
         DW ModeLabel10,ModeLabel11,ModeLabel12,ModeLabel13
 ; Explicit screen descriptions: test number, resolution and colour format.
-ModeLabel01: DEFM "MODE 01 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 8 BPP / 256 COLORS",13,13,0
-ModeLabel02: DEFM "MODE 02 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 15 BPP / RGB555",13,13,0
-ModeLabel03: DEFM "MODE 03 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 16 BPP / RGB565",13,13,0
-ModeLabel04: DEFM "MODE 04 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 24 BPP / RGB888",13,13,0
-ModeLabel05: DEFM "MODE 05 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 32 BPP / XRGB8888",13,13,0
-ModeLabel06: DEFM "MODE 06 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 8 BPP / 256 COLORS",13,13,0
-ModeLabel07: DEFM "MODE 07 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 15 BPP / RGB555",13,13,0
-ModeLabel08: DEFM "MODE 08 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
-ModeLabel09: DEFM "MODE 09 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 24 BPP / RGB888",13,13,0
-ModeLabel10: DEFM "MODE 10 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 8 BPP / 256 COLORS",13,13,0
-ModeLabel11: DEFM "MODE 11 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 15 BPP / RGB555",13,13,0
-ModeLabel12: DEFM "MODE 12 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 16 BPP / RGB565",13,13,0
-ModeLabel13: DEFM "MODE 13 OF 13",13,"RESOLUTION: 1024x768",13,"COLOR: 8 BPP / 256 COLORS",13,13,0
+ModeLabel01: DEFM "MODE 01 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 8 BPP / 256 COLORS",13,"VRAM: 64000 BYTES",13,13,0
+ModeLabel02: DEFM "MODE 02 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 15 BPP / RGB555",13,"VRAM: 128000 BYTES",13,13,0
+ModeLabel03: DEFM "MODE 03 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 16 BPP / RGB565",13,"VRAM: 128000 BYTES",13,13,0
+ModeLabel04: DEFM "MODE 04 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 24 BPP / RGB888",13,"VRAM: 192000 BYTES",13,13,0
+ModeLabel05: DEFM "MODE 05 OF 13",13,"RESOLUTION: 320x200",13,"COLOR: 32 BPP / XRGB8888",13,"VRAM: 256000 BYTES",13,13,0
+ModeLabel06: DEFM "MODE 06 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 8 BPP / 256 COLORS",13,"VRAM: 307200 BYTES",13,13,0
+ModeLabel07: DEFM "MODE 07 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 15 BPP / RGB555",13,"VRAM: 614400 BYTES",13,13,0
+ModeLabel08: DEFM "MODE 08 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 16 BPP / RGB565",13,"VRAM: 614400 BYTES",13,13,0
+ModeLabel09: DEFM "MODE 09 OF 13",13,"RESOLUTION: 640x480",13,"COLOR: 24 BPP / RGB888",13,"VRAM: 921600 BYTES",13,13,0
+ModeLabel10: DEFM "MODE 10 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 8 BPP / 256 COLORS",13,"VRAM: 480000 BYTES",13,13,0
+ModeLabel11: DEFM "MODE 11 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 15 BPP / RGB555",13,"VRAM: 960000 BYTES",13,13,0
+ModeLabel12: DEFM "MODE 12 OF 13",13,"RESOLUTION: 800x600",13,"COLOR: 16 BPP / RGB565",13,"VRAM: 960000 BYTES",13,13,0
+ModeLabel13: DEFM "MODE 13 OF 13",13,"RESOLUTION: 1024x768",13,"COLOR: 8 BPP / 256 COLORS",13,"VRAM: 786432 BYTES",13,13,0
 
 ColorPattern:
         ; Eight RGB565 colours, each repeated for eight adjacent pixels.
@@ -900,8 +929,8 @@ ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
 ScreenShadowReady: DEFM "ATM SHADOW PORTS OPENED",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA TEST CONFIGURATION:",13,13,0
 ScreenInitialMode: DEFM "INITIAL TEST 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
-ScreenInitialTestRunning: DEFM "TEST: WRITE 640x480 FRAMEBUFFER",13,0
-ScreenTestRunning: DEFM "TEST: WRITE FULL 1MB VIDEO RAM",13,0
+ScreenInitialTestRunning: DEFM "TEST: WRITE 640x480 FRAMEBUFFER",13,"VRAM: 614400 BYTES",13,0
+ScreenTestRunning: DEFM "TEST: WRITE MODE FRAMEBUFFER",13,0
 ScreenWriteRunning:DEFM "STATUS: WRITING - PLEASE WAIT",13,13,0
 ScreenWritePassed: DEFM "STATUS: WRITE COMPLETE",13,13,0
 ScreenNextHint:    DEFM "PRESS SPACE FOR NEXT MODE",0
