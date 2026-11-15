@@ -23,22 +23,24 @@ VgaTestEntry:
         DI
         LD      SP,$BFFF
 
-        ; Keep the same interrupt state as the proven Project112 startup.
-        CALL    SpectrumShowStartup
+        ; Follow Project112: unlock and select the standard Spectrum page
+        ; before touching the screen bitmap directly.
 
         LD      HL,MsgBuild
         CALL    DebugPrint
         LD      HL,MsgStart
         CALL    DebugPrint
 
-        LD      HL,ScreenOpeningPorts
-        CALL    SpectrumShowStatus
         CALL    OpenATMShadowPorts
 
-        ; Match the proven Project112 page selection after shadow-port unlock.
+        ; Exact Project112 order: unlock shadow ports, then select page 5.
         XOR     A
         LD      BC,$7FFD
         OUT     (C),A
+
+        CALL    SpectrumShowStartup
+        LD      HL,ScreenShadowReady
+        CALL    SpectrumShowStatus
 
         LD      HL,MsgAdapterInit
         CALL    DebugPrint
@@ -895,7 +897,7 @@ MsgSweepDone:    DEFM "PACKED SVGA MODE SWEEP DONE",13,10,0
 
 ScreenTitle:       DEFM "PROJECT132 - VGA ADAPTER TEST",13,13,0
 ScreenStarting:    DEFM "STARTING VGA TEST...",13,13,0
-ScreenOpeningPorts: DEFM "OPENING ATM SHADOW PORTS...",13,13,0
+ScreenShadowReady: DEFM "ATM SHADOW PORTS OPENED",13,13,0
 ScreenModeHeading: DEFM "CURRENT VGA TEST CONFIGURATION:",13,13,0
 ScreenInitialMode: DEFM "INITIAL TEST 640x480",13,"COLOR: 16 BPP / RGB565",13,13,0
 ScreenInitialTestRunning: DEFM "TEST: WRITE 640x480 FRAMEBUFFER",13,0
